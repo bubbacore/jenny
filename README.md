@@ -2,7 +2,7 @@
 
 O núcleo de dados do Bubba no Supabase: o banco, a ingestão e os contratos entre as partes do projeto.
 
-O Bubba é um site público e gratuito com a programação dos cinemas de Aracaju e região metropolitana. Este repositório é dono do schema e do contrato da leitura, que a coleta e o site seguem.
+Este repositório é dono do schema e do contrato da leitura, que a coleta e o site seguem.
 
 ## O que faz
 
