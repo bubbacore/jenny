@@ -1,4 +1,4 @@
-# bubba-jenny
+# bubbacore/jenny
 
 O núcleo de dados do Bubba no Supabase: o banco, a ingestão e os contratos entre as partes do projeto.
 
@@ -15,9 +15,9 @@ Este repositório é dono do schema e do contrato da leitura, que a coleta e o s
 
 ```
 canais oficiais dos cinemas
-  → Hermes Agent (bubba-forrest)
-  → ingestão e banco no Supabase (bubba-jenny)
-  → site estático (bubba-site)
+  → Hermes Agent (bubbacore/forrest)
+  → ingestão e banco no Supabase (bubbacore/jenny)
+  → site estático (bubbacore/site)
 ```
 
 A coleta só lê e identifica, e o site só mostra. As decisões sobre o que uma leitura significa ficam num só lugar, aqui, e são testadas por um só ponto, a ingestão.
@@ -30,11 +30,11 @@ A coleta só lê e identifica, e o site só mostra. As decisões sobre o que uma
 
 ## Estado
 
-O projeto está na fase de especificação e ainda não tem código. A spec em vigor é a [Bubba v1](https://github.com/jamesclebio/bubba-dan/blob/main/docs/specs/bubba-v1.md), publicada no Linear como [JAM-5](https://linear.app/jamesclebio/issue/JAM-5). Os tickets derivados dela são suas sub-issues.
+O projeto está na fase de especificação e ainda não tem código. A spec em vigor é a [Bubba v1](https://github.com/bubbacore/dan/blob/main/docs/specs/bubba-v1.md), publicada no Linear como [JAM-5](https://linear.app/jamesclebio/issue/JAM-5). Os tickets derivados dela são suas sub-issues.
 
 ## Documentação
 
-A spec, as decisões de arquitetura e o glossário do domínio ficam no [bubba-dan](https://github.com/jamesclebio/bubba-dan). Use os termos do glossário em código, testes, issues e commits.
+A spec, as decisões de arquitetura e o glossário do domínio ficam no [bubbacore/dan](https://github.com/bubbacore/dan). Use os termos do glossário em código, testes, issues e commits.
 
 ## Como contribuir
 
