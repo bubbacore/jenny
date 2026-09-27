@@ -36,6 +36,12 @@ O projeto está na fase de especificação e ainda não tem código. A spec em v
 
 A spec, as decisões de arquitetura e o glossário do domínio ficam no [bubbacore/dan](https://github.com/bubbacore/dan). Use os termos do glossário em código, testes, issues e commits.
 
+## Releases
+
+Ainda não há release porque o projeto está na fase de especificação. Quando houver código publicável, a Jenny terá versão semântica própria, e o banco e a ingestão receberão somente o release aprovado mais recente, nunca a branch `main`.
+
+O fluxo compartilhado está no [runbook de releases do Bubba](https://github.com/bubbacore/dan/blob/main/docs/runbooks/releases.md) e segue a [ADR 0009](https://github.com/bubbacore/dan/blob/main/docs/adr/0009-versao-semantica-por-repositorio.md).
+
 ## Como contribuir
 
 - **Spec primeiro:** implemente só tickets de uma spec ou de um agent brief aprovado.
