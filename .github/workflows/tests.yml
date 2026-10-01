@@ -1,0 +1,55 @@
+name: Tests
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: Ingestion tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.119.0
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Check formatting, lint and types
+        run: |
+          deno fmt --check
+          deno lint
+          deno task check
+
+      - name: Start local Supabase
+        run: supabase start -x studio,realtime,imgproxy,mailpit,logflare,vector,supavisor,postgres-meta
+
+      - name: Run database tests
+        run: supabase test db
+
+      - name: Serve the ingestion
+        run: |
+          supabase functions serve --env-file supabase/functions/test.env > functions.log 2>&1 &
+          for attempt in $(seq 1 60); do
+            status=$(curl -s -o /dev/null -w '%{http_code}' -X POST http://127.0.0.1:54321/functions/v1/ingestion/collection-plan || true)
+            if [ "$status" = "401" ]; then exit 0; fi
+            sleep 2
+          done
+          cat functions.log
+          exit 1
+
+      - name: Run ingestion tests
+        run: deno task test
+
+      - name: Show ingestion logs
+        if: failure()
+        run: cat functions.log || true
