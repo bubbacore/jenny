@@ -1,10 +1,7 @@
 import { z } from "zod";
 import type { Context } from "./handler.ts";
-import { failure, json, pointer } from "./http.ts";
-
-z.config(z.locales.pt());
-
-const slug = z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/);
+import { failure, invalidRequest, json, pointer } from "./http.ts";
+import { slug } from "./reading-contract.ts";
 
 const CollectionPlanRequest = z.strictObject({
   collection_type: z.enum(["daily", "recollection", "manual"]),
@@ -16,19 +13,7 @@ const CollectionPlanRequest = z.strictObject({
 export async function collectionPlan(body: unknown, { database, now }: Context): Promise<Response> {
   const parsed = CollectionPlanRequest.safeParse(body);
   if (!parsed.success) {
-    return failure(
-      400,
-      "invalid_request",
-      "A requisição não segue o contrato do plano da coleta.",
-      parsed.error.issues.flatMap((issue) =>
-        issue.code === "unrecognized_keys"
-          ? issue.keys.map((key) => ({
-            path: pointer([...issue.path, key]),
-            message: "Campo desconhecido.",
-          }))
-          : [{ path: pointer(issue.path), message: issue.message }]
-      ),
-    );
+    return invalidRequest("A requisição não segue o contrato do plano da coleta.", parsed.error);
   }
 
   const chosen = parsed.data.cinemas ?? null;
