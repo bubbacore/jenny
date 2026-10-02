@@ -9,16 +9,31 @@ const RecordReadingRequest = z.strictObject({
   reading: Reading,
 });
 
+type Alert = {
+  type: string;
+  subject: string;
+  effect: "open" | "inform" | "resolve";
+  text: string;
+};
+
 type Recorded =
-  | { reading_id: string; result: "success"; sessions: Record<string, number>; alerts: unknown[] }
+  | {
+    reading_id: string;
+    result: "success" | "failure";
+    failure_type?: "error" | "incomplete" | "outdated";
+    reason?: string;
+    sessions: Record<string, number>;
+    alerts: Alert[];
+  }
   | {
     refusal:
       | { code: "unknown_reading" | "reading_closed" | "reservation_expired" }
       | { code: "invalid_reading"; issues: Issue[] };
   };
 
-// Records the reading of a reserved cinema, which replaces the cinema's whole
-// programação, and returns the result with the alerts to send.
+// Records the reading of a reserved cinema and returns the result with the
+// alerts to send. A successful reading replaces the cinema's whole
+// programação, and a failed one erases it.
 export async function recordReading(body: unknown, { database, now }: Context): Promise<Response> {
   const parsed = RecordReadingRequest.safeParse(body);
   if (!parsed.success) {
@@ -29,17 +44,6 @@ export async function recordReading(body: unknown, { database, now }: Context): 
   }
 
   const { reading_id, collection_release, reading } = parsed.data;
-  if (reading.status !== "ok") {
-    return failure(
-      422,
-      "failed_reading_not_supported",
-      "A ingestão ainda não registra leitura com falha.",
-      [
-        { path: "/reading/status", message: "Por enquanto, só leituras com status ok." },
-      ],
-    );
-  }
-
   const { data, error } = await database.rpc("record_reading", {
     reading_id,
     collection_release,

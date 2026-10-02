@@ -1,66 +1,7 @@
 // deno-lint-ignore-file no-explicit-any
 import { assertEquals } from "@std/assert";
 import { callIngestion, readView } from "./local.ts";
-
-// Monday in Aracaju. The window runs from 2026-10-05 to 2026-10-11.
-const MONDAY_NOON = "2026-10-05T12:00:00-03:00";
-const RELEASE = "v0.1.0";
-
-function movie(key: string, tmdbId: number, extra: Record<string, unknown> = {}) {
-  return {
-    key,
-    source_title: `Filme ${key}`,
-    tmdb_id: tmdbId,
-    tmdb_search_top_id: tmdbId,
-    tmdb: { title: `Filme ${tmdbId}`, original_title: `Movie ${tmdbId}` },
-    ...extra,
-  };
-}
-
-function session(movieKey: string, startsAt: string, extra: Record<string, unknown> = {}) {
-  return {
-    movie_key: movieKey,
-    starts_at: startsAt,
-    room: "Sala 1",
-    audio: "dubbed",
-    format: "2d",
-    tags: [],
-    prices: [],
-    ...extra,
-  };
-}
-
-function reading(cinema: string, source: string, movies: unknown[], sessions: unknown[]) {
-  return { cinema, source, status: "ok", movies, sessions };
-}
-
-function start(cinema: string, clock = MONDAY_NOON) {
-  return callIngestion("start-reading", { cinema }, { clock });
-}
-
-function record(readingId: string, body: unknown, clock = MONDAY_NOON, release = RELEASE) {
-  return callIngestion(
-    "record-reading",
-    { reading_id: readingId, collection_release: release, reading: body },
-    { clock },
-  );
-}
-
-async function read(
-  cinema: string,
-  source: string,
-  movies: unknown[],
-  sessions: unknown[],
-  clock = MONDAY_NOON,
-) {
-  const started = await start(cinema, clock);
-  assertEquals(started.status, 201, JSON.stringify(started.body));
-  return record(started.body.reading_id, reading(cinema, source, movies, sessions), clock);
-}
-
-function showtimes(cinema: string) {
-  return readView("site_showtimes", `cinema=eq.${cinema}&order=starts_at,movie,room`);
-}
+import { movie, read, reading, record, RELEASE, session, showtimes, start } from "./reading.ts";
 
 Deno.test("uma segunda reserva do mesmo cinema é recusada enquanto a primeira está em andamento", async () => {
   const first = await start("cine-alquimia", "2026-10-05T12:00:00-03:00");
@@ -149,7 +90,6 @@ Deno.test("uma leitura nova substitui tudo o que havia para o cinema", async () 
   assertEquals(first.status, 200);
   assertEquals(first.body.result, "success");
   assertEquals(first.body.sessions, { received: 3, discarded: 0, accepted: 3, retained: 0 });
-  assertEquals(first.body.alerts, []);
   assertEquals((await showtimes("centerplex-parque-shopping")).length, 3);
 
   const second = await read("centerplex-parque-shopping", "veloxtickets", [movie("c", 9100003)], [
@@ -171,10 +111,6 @@ Deno.test("uma leitura nova substitui tudo o que havia para o cinema", async () 
     (await readView("site_movies", "tmdb_id=in.(9100001,9100002,9100003)")).map((m) => m.tmdb_id),
     [9100003],
   );
-
-  const empty = await read("centerplex-parque-shopping", "veloxtickets", [], []);
-  assertEquals(empty.status, 200);
-  assertEquals(await showtimes("centerplex-parque-shopping"), []);
 });
 
 Deno.test("sessões fora da janela são descartadas e não contam para nenhuma regra", async () => {
@@ -509,19 +445,4 @@ Deno.test("uma leitura fora do contrato é recusada com o caminho de cada campo 
     assertEquals(response.body.error.code, "invalid_request", name);
     assertEquals(response.body.error.issues.map((issue: any) => issue.path), paths, name);
   }
-});
-
-Deno.test("o registro ainda não aceita leitura com falha", async () => {
-  const { status, body } = await callIngestion("record-reading", {
-    reading_id: crypto.randomUUID(),
-    collection_release: RELEASE,
-    reading: {
-      ...reading("cine-alquimia", "ingresso_com", [], []),
-      status: "error",
-      reason: "A fonte não respondeu.",
-    },
-  });
-
-  assertEquals(status, 422);
-  assertEquals(body.error.code, "failed_reading_not_supported");
 });
