@@ -1,6 +1,6 @@
 begin;
 
-select plan(17);
+select plan(22);
 
 -- Configuração própria do tipo de fonte
 
@@ -130,6 +130,37 @@ select is(
      and (select count(*) from public.sources where cinema_id = cinema.id and active) <> 1),
   0,
   'todo cinema ativo dos cadastros tem exatamente uma fonte ativa'
+);
+
+-- Nomes populares e nome oficial
+
+select is(
+  (select official_name from public.cinemas where slug = 'cinema-do-centro'),
+  'Cine Walmir Almeida',
+  'o Cinema do Centro tem o nome oficial Cine Walmir Almeida'
+);
+
+select lives_ok(
+  $$ update public.cinemas set other_popular_names = '{"Cine Walmir"}' where slug = 'cinema-do-centro' $$,
+  'aceita outros nomes populares diferentes do principal e do oficial'
+);
+
+select throws_ok(
+  $$ update public.cinemas set official_name = 'cinema do centro' where slug = 'cinema-do-centro' $$,
+  '23514', null,
+  'recusa um nome oficial igual a um nome popular, sem distinguir maiúsculas'
+);
+
+select throws_ok(
+  $$ update public.cinemas set other_popular_names = '{"Cine Walmir", " Cine Walmir "}' where slug = 'cinema-do-centro' $$,
+  '23514', null,
+  'recusa nomes populares repetidos'
+);
+
+select throws_ok(
+  $$ update public.cinemas set other_popular_names = '{" "}' where slug = 'cinema-do-centro' $$,
+  '23514', null,
+  'recusa um nome popular em branco'
 );
 
 -- Visões
