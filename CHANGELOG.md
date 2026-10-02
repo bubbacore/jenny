@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.2.0](https://github.com/bubbacore/jenny/compare/v0.1.0...v0.2.0) (2026-10-02)
+
+
+### Features
+
+* **ingestion:** publish the reading contract ([9651c54](https://github.com/bubbacore/jenny/commit/9651c54bb4ef1b5c6fffdcb92a84a537cd28e688))
+* **ingestion:** reserve a cinema and record a successful reading ([5976922](https://github.com/bubbacore/jenny/commit/5976922f85b5a6a15f8936d4a5798e6a364855d1))
+* **ingestion:** reserve a cinema and record a successful reading ([8ee7d1f](https://github.com/bubbacore/jenny/commit/8ee7d1f7d0f9a64a28d9337dd3d801543b4e430a))
+
 ## 0.1.0 (2026-10-02)
 
 
