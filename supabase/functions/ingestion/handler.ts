@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { hasToken } from "./auth.ts";
 import { collectionPlan } from "./collection-plan.ts";
 import { failure } from "./http.ts";
+import { recollectionCinemas } from "./recollection-cinemas.ts";
 import { recordReading } from "./record-reading.ts";
 import { startReading } from "./start-reading.ts";
 
@@ -13,6 +14,7 @@ const operations: Record<string, Operation> = {
   "collection-plan": collectionPlan,
   "start-reading": startReading,
   "record-reading": recordReading,
+  "recollection-cinemas": recollectionCinemas,
 };
 
 export type Options = {
