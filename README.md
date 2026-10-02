@@ -60,7 +60,13 @@ A spec, as decisões de arquitetura e o glossário do domínio ficam no [bubbaco
 
 ## Releases
 
-Ainda não há release. A Jenny terá versão semântica própria, e o banco e a ingestão receberão somente o release aprovado mais recente, nunca a branch `main`.
+A Jenny tem versão semântica própria, e o banco e a ingestão recebem somente o release aprovado mais recente, nunca a branch `main`.
+
+- O workflow `Release Please` abre e atualiza a release PR a partir dos commits na `main`. A release PR também precisa passar nos testes: aprove os workflows que aguardam aprovação na própria PR.
+- Quando o merge da release PR cria um release, o job `Database release` parte da tag do release, aplica as migrations e só depois faz o deploy da ingestão. Se as migrations falham, a ingestão não sobe.
+- O job usa o segredo `SUPABASE_ACCESS_TOKEN` e a variável `SUPABASE_PROJECT_ID` do environment `production`, liberado só para a `main`. Ele não liga o projeto pela CLI, e as migrations rodam com o papel de login temporário que a CLI cria a partir do token, sem a senha do banco.
+- O job não roda os testes de novo, porque eles já são verificação obrigatória da `main`.
+- Se o job falhar, corrija a causa e use **Re-run failed jobs** na mesma execução. O job aplica só as migrations que faltam e sobe a ingestão de novo. Um erro no código é corrigido por um release novo.
 
 O fluxo compartilhado está no [runbook de releases do Bubba](https://github.com/bubbacore/dan/blob/main/docs/runbooks/releases.md) e segue a [ADR 0009](https://github.com/bubbacore/dan/blob/main/docs/adr/0009-versao-semantica-por-repositorio.md).
 
