@@ -33,3 +33,13 @@ export async function callIngestion(
   });
   return { status: response.status, body: await response.json() };
 }
+
+// Reads a view of the site build, with the build's privileged key.
+export async function readView(view: string, query = ""): Promise<any[]> {
+  const response = await fetch(`${apiUrl}/rest/v1/${view}?${query}`, {
+    headers: { apikey: secretKey },
+  });
+  const body = await response.json();
+  if (!response.ok) throw new Error(`${view}: ${JSON.stringify(body)}`);
+  return body;
+}
