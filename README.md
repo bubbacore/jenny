@@ -30,14 +30,14 @@ A coleta só lê e identifica, e o site só mostra. As decisões sobre o que uma
 
 ## Estado
 
-O banco tem os cadastros da v1. A ingestão responde ao plano da coleta, reserva o cinema no início da leitura e registra a leitura com sucesso, que substitui toda a programação do cinema. O build já tem as visões de onde lerá a programação. As demais operações da ingestão chegam pelos tickets da spec em vigor, a [Bubba v1](https://github.com/bubbacore/dan/blob/main/docs/specs/bubba-v1.md), publicada no Linear como [JAM-5](https://linear.app/jamesclebio/issue/JAM-5).
+O banco tem os cadastros da v1. A ingestão responde ao plano da coleta, reserva o cinema no início da leitura e registra a leitura. Uma leitura com sucesso substitui toda a programação do cinema, e uma leitura com falha a apaga. O registro devolve os alertas de falha, de volta, de queda brusca de sessões e de sessão em dia sem funcionamento, e a ingestão diz quais cinemas recoletar. O build já tem as visões de onde lerá a programação e o estado de cada dia da janela. As demais operações da ingestão chegam pelos tickets da spec em vigor, a [Bubba v1](https://github.com/bubbacore/dan/blob/main/docs/specs/bubba-v1.md), publicada no Linear como [JAM-5](https://linear.app/jamesclebio/issue/JAM-5).
 
 ## Estrutura
 
 - `supabase/migrations/`: o schema e os cadastros. Cada cadastro novo ou alterado entra numa migration de dados nova.
-- `supabase/functions/ingestion/`: a ingestão, chamada pelo Hermes em `POST /functions/v1/ingestion/<operação>`, com o token do Hermes no cabeçalho `Authorization: Bearer`. As operações são `collection-plan`, `start-reading` e `record-reading`.
+- `supabase/functions/ingestion/`: a ingestão, chamada pelo Hermes em `POST /functions/v1/ingestion/<operação>`, com o token do Hermes no cabeçalho `Authorization: Bearer`. As operações são `collection-plan`, `start-reading`, `record-reading` e `recollection-cinemas`.
 - `contracts/reading.schema.json`: o contrato da leitura publicado em JSON Schema, para que as ferramentas de leitura do Hermes validem contra a mesma definição da ingestão. Ele é gerado pela definição em `supabase/functions/ingestion/reading-contract.ts` com `deno task contract`, e um teste falha quando o arquivo fica desatualizado. As ferramentas usam o contrato do release mais recente da Jenny.
-- Visões do build: `site_showtimes`, com a programação, `site_cinemas` e `site_movies`, lidas só com a chave secreta do build.
+- Visões do build: `site_showtimes`, com a programação, `site_cinemas` e `site_movies`, lidas só com a chave secreta do build. O estado de cada dia da janela vem da função `site_cinema_days`, que recebe o momento para o qual o site é gerado.
 - `supabase/seed.sql`: só os dados fixos dos testes, aplicados no banco local.
 - `supabase/tests/database/`: os testes do banco, em pgTAP.
 - `tests/ingestion/`: os testes da ingestão, que a chamam como o Hermes chamaria.
