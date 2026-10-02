@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/bubbacore/jenny/compare/v0.2.0...v0.3.0) (2026-10-02)
+
+
+### Features
+
+* **ingestion:** record failed readings and the state of each day ([021e992](https://github.com/bubbacore/jenny/commit/021e99271f354b5b895c484ca29dc91af0619ae2))
+
 ## [0.2.0](https://github.com/bubbacore/jenny/compare/v0.1.0...v0.2.0) (2026-10-02)
 
 
