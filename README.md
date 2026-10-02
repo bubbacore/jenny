@@ -30,12 +30,14 @@ A coleta só lê e identifica, e o site só mostra. As decisões sobre o que uma
 
 ## Estado
 
-O banco tem os cadastros da v1. A ingestão responde ao plano da coleta, reserva o cinema no início da leitura e registra a leitura. Uma leitura com sucesso substitui toda a programação do cinema, e uma leitura com falha a apaga. O registro devolve os alertas de falha, de volta, de queda brusca de sessões e de sessão em dia sem funcionamento, e a ingestão diz quais cinemas recoletar. O build já tem as visões de onde lerá a programação e o estado de cada dia da janela. As demais operações da ingestão chegam pelos tickets da spec em vigor, a [Bubba v1](https://github.com/bubbacore/dan/blob/main/docs/specs/bubba-v1.md), publicada no Linear como [JAM-5](https://linear.app/jamesclebio/issue/JAM-5).
+O banco tem os cadastros da v1. O plano da coleta inicia a coleta, o início da leitura reserva o cinema dentro dela, e o registro da leitura a grava. Uma leitura com sucesso substitui toda a programação do cinema, e uma leitura com falha a apaga. O registro devolve os alertas de falha, de volta, de queda brusca de sessões e de sessão em dia sem funcionamento, e a ingestão diz quais cinemas recoletar. O fim da coleta decide se ela termina com uma publicação do site, a reversão da publicação do site suspende a publicação automática, e a ingestão devolve os resumos de coleta e diz ao vigia da coleta se a coleta diária de hoje terminou. O build já tem as visões de onde lerá a programação e o estado de cada dia da janela. As demais operações da ingestão chegam pelos tickets da spec em vigor, a [Bubba v1](https://github.com/bubbacore/dan/blob/main/docs/specs/bubba-v1.md), publicada no Linear como [JAM-5](https://linear.app/jamesclebio/issue/JAM-5).
 
 ## Estrutura
 
 - `supabase/migrations/`: o schema e os cadastros. Cada cadastro novo ou alterado entra numa migration de dados nova.
-- `supabase/functions/ingestion/`: a ingestão, chamada pelo Hermes em `POST /functions/v1/ingestion/<operação>`, com o token do Hermes no cabeçalho `Authorization: Bearer`. As operações são `collection-plan`, `start-reading`, `record-reading` e `recollection-cinemas`.
+- `supabase/functions/ingestion/`: a ingestão, chamada em `POST /functions/v1/ingestion/<operação>`, com o token no cabeçalho `Authorization: Bearer`:
+  - o Hermes chama `collection-plan`, `start-reading`, `record-reading`, `recollection-cinemas`, `finish-collection`, `collection-summary`, `record-site-reversion` e `record-site-publication`;
+  - o vigia da coleta chama só `daily-collection-status`, com o token próprio dele, e o token do Hermes é recusado ali.
 - `contracts/reading.schema.json`: o contrato da leitura publicado em JSON Schema, para que as ferramentas de leitura do Hermes validem contra a mesma definição da ingestão. Ele é gerado pela definição em `supabase/functions/ingestion/reading-contract.ts` com `deno task contract`, e um teste falha quando o arquivo fica desatualizado. As ferramentas usam o contrato do release mais recente da Jenny.
 - Visões do build: `site_showtimes`, com a programação, `site_cinemas` e `site_movies`, lidas só com a chave secreta do build. O estado de cada dia da janela vem da função `site_cinema_days`, que recebe o momento para o qual o site é gerado.
 - `supabase/seed.sql`: só os dados fixos dos testes, aplicados no banco local.
@@ -53,7 +55,7 @@ supabase functions serve --env-file supabase/functions/test.env
 deno task test
 ```
 
-- O `test.env` guarda só o token fixo dos testes e libera o cabeçalho `x-ingestion-clock`, que fixa o relógio da ingestão. Em produção, nenhum dos dois existe.
+- O `test.env` guarda só os tokens fixos dos testes e libera o cabeçalho `x-ingestion-clock`, que fixa o relógio da ingestão. Em produção, nada disso existe.
 - A CI roda os mesmos passos em todo PR e em todo push na `main`, além do `deno fmt --check`, do `deno lint` e do `deno task check`.
 
 ## Documentação
@@ -76,4 +78,4 @@ O fluxo compartilhado está no [runbook de releases do Bubba](https://github.com
 
 - **Spec primeiro:** implemente só tickets de uma spec ou de um agent brief aprovado.
 - **Commits:** siga o [Conventional Commits](https://www.conventionalcommits.org/pt-br/v1.0.0/), com a mensagem em inglês e no imperativo. Mantenha o assunto abaixo de 72 caracteres, faça uma mudança lógica por commit e cite o ticket no rodapé, como `Refs JAM-12`.
-- **Segredos:** chaves e tokens nunca entram no repositório. O token do Hermes fica no segredo `INGESTION_HERMES_TOKEN` da ingestão, definido pelo dono no Supabase.
+- **Segredos:** chaves e tokens nunca entram no repositório. O token do Hermes fica no segredo `INGESTION_HERMES_TOKEN` da ingestão, e o do vigia da coleta, no `INGESTION_WATCHMAN_TOKEN`, os dois definidos pelo dono no Supabase.
