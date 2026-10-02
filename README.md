@@ -30,7 +30,29 @@ A coleta só lê e identifica, e o site só mostra. As decisões sobre o que uma
 
 ## Estado
 
-O projeto está na fase de especificação e ainda não tem código. A spec em vigor é a [Bubba v1](https://github.com/bubbacore/dan/blob/main/docs/specs/bubba-v1.md), publicada no Linear como [JAM-5](https://linear.app/jamesclebio/issue/JAM-5). Os tickets derivados dela são suas sub-issues.
+O banco tem os cadastros da v1, e a ingestão responde ao plano da coleta. As demais operações da ingestão chegam pelos tickets da spec em vigor, a [Bubba v1](https://github.com/bubbacore/dan/blob/main/docs/specs/bubba-v1.md), publicada no Linear como [JAM-5](https://linear.app/jamesclebio/issue/JAM-5).
+
+## Estrutura
+
+- `supabase/migrations/`: o schema e os cadastros. Cada cadastro novo ou alterado entra numa migration de dados nova.
+- `supabase/functions/ingestion/`: a ingestão, chamada pelo Hermes em `POST /functions/v1/ingestion/<operação>`, com o token do Hermes no cabeçalho `Authorization: Bearer`.
+- `supabase/seed.sql`: só os dados fixos dos testes, aplicados no banco local.
+- `supabase/tests/database/`: os testes do banco, em pgTAP.
+- `tests/ingestion/`: os testes da ingestão, que a chamam como o Hermes chamaria.
+
+## Desenvolvimento local
+
+Requer a [Supabase CLI](https://supabase.com/docs/guides/local-development/cli/getting-started), o Deno 2 e um runtime de containers, como o Docker ou o Colima.
+
+```sh
+supabase start
+supabase test db
+supabase functions serve --env-file supabase/functions/test.env
+deno task test
+```
+
+- O `test.env` guarda só o token fixo dos testes e libera o cabeçalho `x-ingestion-clock`, que fixa o relógio da ingestão. Em produção, nenhum dos dois existe.
+- A CI roda os mesmos passos em todo PR e em todo push na `main`, além do `deno fmt --check`, do `deno lint` e do `deno task check`.
 
 ## Documentação
 
@@ -38,7 +60,7 @@ A spec, as decisões de arquitetura e o glossário do domínio ficam no [bubbaco
 
 ## Releases
 
-Ainda não há release porque o projeto está na fase de especificação. Quando houver código publicável, a Jenny terá versão semântica própria, e o banco e a ingestão receberão somente o release aprovado mais recente, nunca a branch `main`.
+Ainda não há release. A Jenny terá versão semântica própria, e o banco e a ingestão receberão somente o release aprovado mais recente, nunca a branch `main`.
 
 O fluxo compartilhado está no [runbook de releases do Bubba](https://github.com/bubbacore/dan/blob/main/docs/runbooks/releases.md) e segue a [ADR 0009](https://github.com/bubbacore/dan/blob/main/docs/adr/0009-versao-semantica-por-repositorio.md).
 
@@ -46,4 +68,4 @@ O fluxo compartilhado está no [runbook de releases do Bubba](https://github.com
 
 - **Spec primeiro:** implemente só tickets de uma spec ou de um agent brief aprovado.
 - **Commits:** siga o [Conventional Commits](https://www.conventionalcommits.org/pt-br/v1.0.0/), com a mensagem em inglês e no imperativo. Mantenha o assunto abaixo de 72 caracteres, faça uma mudança lógica por commit e cite o ticket no rodapé, como `Refs JAM-12`.
-- **Segredos:** chaves e tokens nunca entram no repositório.
+- **Segredos:** chaves e tokens nunca entram no repositório. O token do Hermes fica no segredo `INGESTION_HERMES_TOKEN` da ingestão, definido pelo dono no Supabase.
