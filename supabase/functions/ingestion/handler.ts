@@ -1,25 +1,39 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { hasToken } from "./auth.ts";
 import { collectionPlan } from "./collection-plan.ts";
+import { collectionSummary } from "./collection-summary.ts";
+import { dailyCollectionStatus } from "./daily-collection-status.ts";
+import { finishCollection } from "./finish-collection.ts";
 import { failure } from "./http.ts";
 import { recollectionCinemas } from "./recollection-cinemas.ts";
 import { recordReading } from "./record-reading.ts";
+import { recordSitePublication, recordSiteReversion } from "./site-publication.ts";
 import { startReading } from "./start-reading.ts";
 
 export type Context = { database: SupabaseClient; now: Date };
 
 type Operation = (body: unknown, context: Context) => Promise<Response>;
 
-const operations: Record<string, Operation> = {
-  "collection-plan": collectionPlan,
-  "start-reading": startReading,
-  "record-reading": recordReading,
-  "recollection-cinemas": recollectionCinemas,
+// Who may call an operation: the Hermes, or the collection watchman, whose
+// token reaches only the daily collection status.
+type Caller = "hermes" | "watchman";
+
+const operations: Record<string, { caller: Caller; run: Operation }> = {
+  "collection-plan": { caller: "hermes", run: collectionPlan },
+  "start-reading": { caller: "hermes", run: startReading },
+  "record-reading": { caller: "hermes", run: recordReading },
+  "recollection-cinemas": { caller: "hermes", run: recollectionCinemas },
+  "finish-collection": { caller: "hermes", run: finishCollection },
+  "collection-summary": { caller: "hermes", run: collectionSummary },
+  "record-site-reversion": { caller: "hermes", run: recordSiteReversion },
+  "record-site-publication": { caller: "hermes", run: recordSitePublication },
+  "daily-collection-status": { caller: "watchman", run: dailyCollectionStatus },
 };
 
 export type Options = {
   database: SupabaseClient;
   hermesToken: string | undefined;
+  watchmanToken: string | undefined;
   // Lets local tests fix the clock through the x-ingestion-clock header.
   // Never enabled in production.
   clockOverride: boolean;
@@ -30,7 +44,8 @@ export async function handle(request: Request, options: Options): Promise<Respon
     console.error("INGESTION_HERMES_TOKEN is not set");
     return failure(503, "not_configured", "A ingestão está sem o token do Hermes configurado.");
   }
-  if (!(await hasToken(request, options.hermesToken))) {
+  const caller = await identify(request, options);
+  if (!caller) {
     return failure(401, "unauthorized", "Token ausente ou inválido.");
   }
 
@@ -41,6 +56,9 @@ export async function handle(request: Request, options: Options): Promise<Respon
   }
   if (request.method !== "POST") {
     return failure(405, "method_not_allowed", "Use POST.");
+  }
+  if (operation.caller !== caller) {
+    return failure(403, "forbidden", "Este token não alcança esta operação.");
   }
 
   let body: unknown;
@@ -56,11 +74,17 @@ export async function handle(request: Request, options: Options): Promise<Respon
   }
 
   try {
-    return await operation(body, { database: options.database, now });
+    return await operation.run(body, { database: options.database, now });
   } catch (error) {
     console.error(error);
     return failure(500, "internal_error", "Erro interno da ingestão.");
   }
+}
+
+async function identify(request: Request, options: Options): Promise<Caller | null> {
+  if (options.hermesToken && await hasToken(request, options.hermesToken)) return "hermes";
+  if (options.watchmanToken && await hasToken(request, options.watchmanToken)) return "watchman";
+  return null;
 }
 
 function clock(request: Request, allowed: boolean): Date | null {

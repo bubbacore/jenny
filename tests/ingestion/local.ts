@@ -14,6 +14,7 @@ export const apiUrl: string = status.API_URL;
 export const publishableKey: string = status.PUBLISHABLE_KEY;
 export const secretKey: string = status.SECRET_KEY;
 export const hermesToken: string = testEnv.INGESTION_HERMES_TOKEN;
+export const watchmanToken: string = testEnv.INGESTION_WATCHMAN_TOKEN;
 
 type CallOptions = { token?: string | null; clock?: string; method?: string };
 

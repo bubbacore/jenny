@@ -11,7 +11,13 @@ update public.cinemas set closed_weekdays = '{1,2,3,4,5,6,7}' where slug = 'cine
 
 create temporary table recorded as
 select public.record_reading(
-  (public.start_reading('cine-alquimia', '2026-12-07T12:00:00-03:00') ->> 'reading_id')::uuid,
+  (
+    public.start_reading(
+      public.start_collection('manual', array['cine-alquimia'], true, '2026-12-07T12:00:00-03:00'),
+      'cine-alquimia',
+      '2026-12-07T12:00:00-03:00'
+    ) ->> 'reading_id'
+  )::uuid,
   'v0.1.0',
   '{"cinema": "cine-alquimia", "source": "ingresso_com", "status": "ok", "movies": [], "sessions": []}',
   '2026-12-07T12:00:00-03:00'

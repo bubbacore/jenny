@@ -12,6 +12,7 @@ Deno.serve((request) =>
   handle(request, {
     database,
     hermesToken: Deno.env.get("INGESTION_HERMES_TOKEN"),
+    watchmanToken: Deno.env.get("INGESTION_WATCHMAN_TOKEN"),
     clockOverride: Deno.env.get("INGESTION_CLOCK_OVERRIDE") === "allowed",
   })
 );

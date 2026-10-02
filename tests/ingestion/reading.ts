@@ -5,6 +5,39 @@ import { callIngestion, readView } from "./local.ts";
 export const MONDAY_NOON = "2026-10-05T12:00:00-03:00";
 export const RELEASE = "v0.1.0";
 
+// Tests that depend on a cinema's history, or on every cinema's, run each in
+// its own week, picked at random on every run and far from the fixed dates of
+// the other tests. The history in that week is then only what the test
+// records, and the results do not depend on earlier runs. The first reading
+// of a cinema in the week may still close something left by another run, so
+// its alerts are not checked.
+const runBlock = Math.floor(Math.random() * 1_000);
+let weeksTaken = 0;
+
+// The Monday of a week no other test of this run uses.
+export function newWeek(): string {
+  return addDays("2027-01-04", 7 * (runBlock * 100 + weeksTaken++));
+}
+
+export function addDays(date: string, days: number): string {
+  const day = new Date(`${date}T00:00:00Z`);
+  day.setUTCDate(day.getUTCDate() + days);
+  return day.toISOString().slice(0, 10);
+}
+
+// A time in the cities of v1, which are always at UTC-3.
+export function at(date: string, time: string): string {
+  return `${date}T${time}:00-03:00`;
+}
+
+export function window(date: string): string[] {
+  return [0, 1, 2, 3, 4, 5, 6].map((day) => addDays(date, day));
+}
+
+export function dayMonth(date: string): string {
+  return `${date.slice(8, 10)}/${date.slice(5, 7)}`;
+}
+
 export function movie(key: string, tmdbId: number, extra: Record<string, unknown> = {}) {
   return {
     key,
@@ -39,8 +72,30 @@ export function reading(
   return { cinema, source, status: "ok", movies, sessions, ...extra };
 }
 
-export function start(cinema: string, clock = MONDAY_NOON) {
-  return callIngestion("start-reading", { cinema }, { clock });
+// Starts a collection and returns its id.
+export async function collect(
+  collectionType: "daily" | "recollection" | "manual",
+  clock = MONDAY_NOON,
+  extra: Record<string, unknown> = {},
+): Promise<string> {
+  const { status, body } = await callIngestion(
+    "collection-plan",
+    { collection_type: collectionType, ...extra },
+    { clock },
+  );
+  assertEquals(status, 200, JSON.stringify(body));
+  return body.collection_id;
+}
+
+export function finish(collectionId: string, clock = MONDAY_NOON) {
+  return callIngestion("finish-collection", { collection_id: collectionId }, { clock });
+}
+
+// Reserves the cinema inside the given collection or, without one, inside a
+// new manual collection of every active cinema.
+export async function start(cinema: string, clock = MONDAY_NOON, collectionId?: string) {
+  const collection_id = collectionId ?? await collect("manual", clock);
+  return callIngestion("start-reading", { collection_id, cinema }, { clock });
 }
 
 export function record(readingId: string, body: unknown, clock = MONDAY_NOON, release = RELEASE) {
@@ -59,8 +114,9 @@ export async function read(
   sessions: unknown[],
   clock = MONDAY_NOON,
   extra: Record<string, unknown> = {},
+  collectionId?: string,
 ) {
-  const started = await start(cinema, clock);
+  const started = await start(cinema, clock, collectionId);
   assertEquals(started.status, 201, JSON.stringify(started.body));
   return record(started.body.reading_id, reading(cinema, source, movies, sessions, extra), clock);
 }
