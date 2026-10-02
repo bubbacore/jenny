@@ -2,6 +2,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { hasToken } from "./auth.ts";
 import { collectionPlan } from "./collection-plan.ts";
 import { failure } from "./http.ts";
+import { recordReading } from "./record-reading.ts";
+import { startReading } from "./start-reading.ts";
 
 export type Context = { database: SupabaseClient; now: Date };
 
@@ -9,6 +11,8 @@ type Operation = (body: unknown, context: Context) => Promise<Response>;
 
 const operations: Record<string, Operation> = {
   "collection-plan": collectionPlan,
+  "start-reading": startReading,
+  "record-reading": recordReading,
 };
 
 export type Options = {

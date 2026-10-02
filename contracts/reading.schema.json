@@ -1,0 +1,307 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "cinema": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+        },
+        "source": {
+          "type": "string",
+          "enum": [
+            "ingresso_com",
+            "veloxtickets",
+            "cinesercla_site",
+            "official_site"
+          ]
+        },
+        "movies": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Movie"
+          }
+        },
+        "sessions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Session"
+          }
+        },
+        "status": {
+          "type": "string",
+          "const": "ok"
+        }
+      },
+      "required": [
+        "cinema",
+        "source",
+        "movies",
+        "sessions",
+        "status"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "cinema": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+        },
+        "source": {
+          "type": "string",
+          "enum": [
+            "ingresso_com",
+            "veloxtickets",
+            "cinesercla_site",
+            "official_site"
+          ]
+        },
+        "movies": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Movie"
+          }
+        },
+        "sessions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Session"
+          }
+        },
+        "status": {
+          "type": "string",
+          "const": "error"
+        },
+        "reason": {
+          "type": "string",
+          "pattern": "\\S",
+          "description": "O motivo da falha."
+        }
+      },
+      "required": [
+        "cinema",
+        "source",
+        "movies",
+        "sessions",
+        "status",
+        "reason"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "cinema": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+        },
+        "source": {
+          "type": "string",
+          "enum": [
+            "ingresso_com",
+            "veloxtickets",
+            "cinesercla_site",
+            "official_site"
+          ]
+        },
+        "movies": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Movie"
+          }
+        },
+        "sessions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Session"
+          }
+        },
+        "status": {
+          "type": "string",
+          "const": "incomplete"
+        },
+        "reason": {
+          "type": "string",
+          "pattern": "\\S",
+          "description": "O motivo da falha."
+        }
+      },
+      "required": [
+        "cinema",
+        "source",
+        "movies",
+        "sessions",
+        "status",
+        "reason"
+      ],
+      "additionalProperties": false
+    }
+  ],
+  "title": "Leitura",
+  "description": "A programação completa de um cinema na janela, lida da fonte principal. Além do schema, a ingestão recusa: chaves de filme repetidas, sessões que citam um filme fora da leitura, sessões repetidas (mesmo filme do TMDB, início, sala, idioma e formato), marcadores de sala repetidos, ingressos na fonte repetidos na mesma sessão e datas inexistentes.",
+  "$defs": {
+    "Movie": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string",
+          "pattern": "\\S",
+          "description": "Chave do filme dentro da leitura, citada pelas sessões."
+        },
+        "source_title": {
+          "type": "string",
+          "pattern": "\\S",
+          "description": "O título na fonte, como a fonte principal o publica."
+        },
+        "tmdb_id": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 2147483647,
+          "description": "O identificador do TMDB proposto pelo Hermes."
+        },
+        "tmdb_search_top_id": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 2147483647
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "O primeiro resultado da busca no TMDB por título e ano, ou null sem resultado."
+        },
+        "content_rating": {
+          "description": "A classificação indicativa normalizada. Fica ausente quando a fonte não a publica ou publica outro valor.",
+          "type": "string",
+          "enum": [
+            "10",
+            "12",
+            "14",
+            "16",
+            "18",
+            "L"
+          ]
+        },
+        "tmdb": {
+          "description": "Os metadados do TMDB. Um filme novo traz todos; um filme conhecido, só os que o plano apontou como faltantes.",
+          "type": "object",
+          "properties": {
+            "title": {
+              "description": "O título no Brasil.",
+              "type": "string",
+              "pattern": "\\S"
+            },
+            "original_title": {
+              "type": "string",
+              "pattern": "\\S"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "key",
+        "source_title",
+        "tmdb_id",
+        "tmdb_search_top_id"
+      ],
+      "additionalProperties": false
+    },
+    "Session": {
+      "type": "object",
+      "properties": {
+        "movie_key": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "starts_at": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}$",
+          "description": "O início, no horário local da cidade, como 2026-09-24T17:00."
+        },
+        "room": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "audio": {
+          "type": "string",
+          "enum": [
+            "dubbed",
+            "subtitled",
+            "original"
+          ]
+        },
+        "format": {
+          "type": "string",
+          "enum": [
+            "2d",
+            "3d",
+            "imax"
+          ]
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "\\S"
+          },
+          "description": "Os marcadores de sala, como VIP, XD ou D-BOX."
+        },
+        "external_id": {
+          "description": "O identificador da sessão na fonte.",
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "prices": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Price"
+          },
+          "description": "Vazio quando o preço de bilheteria não pôde ser determinado."
+        }
+      },
+      "required": [
+        "movie_key",
+        "starts_at",
+        "tags",
+        "prices"
+      ],
+      "additionalProperties": false
+    },
+    "Price": {
+      "type": "object",
+      "properties": {
+        "source_ticket": {
+          "type": "string",
+          "pattern": "\\S",
+          "description": "O ingresso na fonte, como a fonte o chama."
+        },
+        "kind": {
+          "description": "O tipo de ingresso, só quando a fonte o informa de forma estruturada.",
+          "type": "string",
+          "enum": [
+            "full",
+            "half",
+            "promo"
+          ]
+        },
+        "price_cents": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 2147483647,
+          "description": "O preço de bilheteria em centavos, sem a taxa de conveniência."
+        }
+      },
+      "required": [
+        "source_ticket",
+        "price_cents"
+      ],
+      "additionalProperties": false
+    }
+  }
+}
