@@ -80,10 +80,10 @@ Deno.test("a janela é hoje e os seis dias seguintes no fuso da cidade", async (
 });
 
 Deno.test("a janela vira o dia à meia-noite no fuso da cidade, não em UTC", async () => {
-  const before = await plan({ collection_type: "daily", cinemas: ["cinema-do-centro"] }, {
+  const before = await plan({ collection_type: "manual", cinemas: ["cinema-do-centro"] }, {
     clock: "2026-10-02T02:59:59Z",
   });
-  const after = await plan({ collection_type: "daily", cinemas: ["cinema-do-centro"] }, {
+  const after = await plan({ collection_type: "manual", cinemas: ["cinema-do-centro"] }, {
     clock: "2026-10-02T03:00:00Z",
   });
 
@@ -94,7 +94,7 @@ Deno.test("a janela vira o dia à meia-noite no fuso da cidade, não em UTC", as
 });
 
 Deno.test("a janela atravessa a virada do ano", async () => {
-  const { body } = await plan({ collection_type: "daily", cinemas: ["cine-alquimia"] }, {
+  const { body } = await plan({ collection_type: "manual", cinemas: ["cine-alquimia"] }, {
     clock: "2027-01-01T02:00:00Z",
   });
 
@@ -146,10 +146,17 @@ Deno.test("uma requisição fora do contrato é recusada com o caminho de cada c
   const cases: [unknown, string[]][] = [
     [{}, ["/collection_type"]],
     [{ collection_type: "weekly" }, ["/collection_type"]],
-    [{ collection_type: "daily", cinemas: [] }, ["/cinemas"]],
-    [{ collection_type: "daily", cinemas: ["Cinema do Centro"] }, ["/cinemas/0"]],
-    [{ collection_type: "daily", cinemas: ["cine-alquimia", "cine-alquimia"] }, ["/cinemas"]],
+    [{ collection_type: "manual", cinemas: [] }, ["/cinemas"]],
+    [{ collection_type: "manual", cinemas: ["Cinema do Centro"] }, ["/cinemas/0"]],
+    [{ collection_type: "manual", cinemas: ["cine-alquimia", "cine-alquimia"] }, ["/cinemas"]],
     [{ collection_type: "daily", cinema: ["cine-alquimia"] }, ["/cinema"]],
+    [{ collection_type: "daily", cinemas: ["cine-alquimia"] }, ["/cinemas"]],
+    [{ collection_type: "recollection" }, ["/cinemas"]],
+    [{ collection_type: "daily", site_publication: false }, ["/site_publication"]],
+    [{ collection_type: "recollection", cinemas: ["cine-alquimia"], site_publication: true }, [
+      "/site_publication",
+    ]],
+    [{ collection_type: "manual", site_publication: "no" }, ["/site_publication"]],
     [[], [""]],
   ];
 

@@ -1,43 +1,23 @@
 // deno-lint-ignore-file no-explicit-any
 import { assertEquals } from "@std/assert";
 import { callIngestion, readView } from "./local.ts";
-import { cinemaDays, movie, read, session, showtimes } from "./reading.ts";
-
-// Each test runs in its own week, picked at random on every run and far from
-// the dates of the other tests. A cinema's history in that week is then only
-// what the test records, and the alerts do not depend on earlier runs. The
-// first reading of each test may still close something left by another run,
-// so its alerts are not checked.
-const runBlock = Math.floor(Math.random() * 10_000);
-
-// The Monday of the test's week, in Aracaju and Nossa Senhora do Socorro.
-function monday(test: number): string {
-  return addDays("2027-01-04", 7 * (runBlock * 10 + test));
-}
-
-function addDays(date: string, days: number): string {
-  const day = new Date(`${date}T00:00:00Z`);
-  day.setUTCDate(day.getUTCDate() + days);
-  return day.toISOString().slice(0, 10);
-}
-
-// A time in the cities of v1, which are always at UTC-3.
-function at(date: string, time: string): string {
-  return `${date}T${time}:00-03:00`;
-}
-
-function window(date: string): string[] {
-  return [0, 1, 2, 3, 4, 5, 6].map((day) => addDays(date, day));
-}
-
-function dayMonth(date: string): string {
-  return `${date.slice(8, 10)}/${date.slice(5, 7)}`;
-}
+import {
+  addDays,
+  at,
+  cinemaDays,
+  dayMonth,
+  movie,
+  newWeek,
+  read,
+  session,
+  showtimes,
+  window,
+} from "./reading.ts";
 
 const error = { status: "error", reason: "A fonte não respondeu." };
 
 Deno.test("uma leitura com erro ou incompleta apaga a programação, e todos os dias do cinema ficam atualizando", async () => {
-  const day = monday(0);
+  const day = newWeek();
   const [, tuesday] = window(day);
   const movies = [movie("a", 9700001)];
   const sessions = [session("a", `${day}T19:00`), session("a", `${tuesday}T19:00`)];
@@ -92,7 +72,7 @@ Deno.test("uma leitura com erro ou incompleta apaga a programação, e todos os 
 });
 
 Deno.test("uma leitura sem nenhuma sessão de hoje em diante, com algum dia de funcionamento na janela, é leitura desatualizada", async () => {
-  const day = monday(1);
+  const day = newWeek();
   const sunday = addDays(day, -1);
   const movies = [movie("a", 9700002)];
 
@@ -132,7 +112,7 @@ Deno.test("uma leitura sem nenhuma sessão de hoje em diante, com algum dia de f
 
 Deno.test("cada dia da janela tem um só estado: com sessões, dia sem funcionamento ou dia não divulgado", async () => {
   // The Cinema do Centro is closed on Tuesdays and Wednesdays.
-  const day = monday(2);
+  const day = newWeek();
   const [, tuesday, wednesday, thursday, friday, saturday, sunday] = window(day);
 
   const { body } = await read("cinema-do-centro", "official_site", [movie("a", 9700003)], [
@@ -153,7 +133,7 @@ Deno.test("cada dia da janela tem um só estado: com sessões, dia sem funcionam
 });
 
 Deno.test("uma sessão em dia sem funcionamento é descartada e gera closed-day-session", async () => {
-  const day = monday(3);
+  const day = newWeek();
   const [, tuesday, wednesday] = window(day);
   const movies = [movie("a", 9700004)];
 
@@ -181,7 +161,7 @@ Deno.test("uma sessão em dia sem funcionamento é descartada e gera closed-day-
 });
 
 Deno.test("uma queda de mais da metade das sessões aceita as sessões e gera session-drop", async () => {
-  const day = monday(4);
+  const day = newWeek();
   const movies = [movie("a", 9700005)];
   const sessions = (amount: number) =>
     window(day).slice(0, amount).map((date) => session("a", `${date}T19:00`));
@@ -209,7 +189,7 @@ Deno.test("uma queda de mais da metade das sessões aceita as sessões e gera se
 });
 
 Deno.test("a primeira falha do dia abre collection-failure, e o sucesso seguinte a resolve", async () => {
-  const day = monday(5);
+  const day = newWeek();
   const tuesday = addDays(day, 1);
   const movies = [movie("a", 9700006)];
   const sessions = [session("a", `${tuesday}T19:00`)];
@@ -258,7 +238,7 @@ Deno.test("a primeira falha do dia abre collection-failure, e o sucesso seguinte
 });
 
 Deno.test("os cinemas para recoleta são os de última leitura do dia com falha, até as 22h", async () => {
-  const day = monday(6);
+  const day = newWeek();
   const sunday = addDays(day, -1);
   const movies = [movie("a", 9700007)];
   const sessions = [session("a", `${day}T19:00`)];
@@ -285,7 +265,7 @@ Deno.test("os cinemas para recoleta são os de última leitura do dia com falha,
 });
 
 Deno.test("a ausência de preço de bilheteria não é falha e não gera alerta", async () => {
-  const day = monday(7);
+  const day = newWeek();
   const movies = [movie("a", 9700008)];
   const priced = [session("a", `${day}T19:00`, {
     prices: [{ source_ticket: "INTEIRA", kind: "full", price_cents: 4200 }],
