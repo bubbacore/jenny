@@ -7,6 +7,7 @@ import { finishCollection } from "./finish-collection.ts";
 import { failure } from "./http.ts";
 import { recollectionCinemas } from "./recollection-cinemas.ts";
 import { recordReading } from "./record-reading.ts";
+import { resolvePendingIdentification } from "./resolve-pending-identification.ts";
 import { recordSitePublication, recordSiteReversion } from "./site-publication.ts";
 import { startReading } from "./start-reading.ts";
 
@@ -23,6 +24,7 @@ const operations: Record<string, { caller: Caller; run: Operation }> = {
   "start-reading": { caller: "hermes", run: startReading },
   "record-reading": { caller: "hermes", run: recordReading },
   "recollection-cinemas": { caller: "hermes", run: recollectionCinemas },
+  "resolve-pending-identification": { caller: "hermes", run: resolvePendingIdentification },
   "finish-collection": { caller: "hermes", run: finishCollection },
   "collection-summary": { caller: "hermes", run: collectionSummary },
   "record-site-reversion": { caller: "hermes", run: recordSiteReversion },

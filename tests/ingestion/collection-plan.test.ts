@@ -1,5 +1,5 @@
 // deno-lint-ignore-file no-explicit-any
-import { assertEquals } from "@std/assert";
+import { assert, assertEquals } from "@std/assert";
 import { apiUrl, callIngestion, hermesToken, publishableKey, secretKey } from "./local.ts";
 
 const plan = (body: unknown, options?: Parameters<typeof callIngestion>[2]) =>
@@ -60,6 +60,17 @@ Deno.test("o plano da coleta traz os dias sem funcionamento de cada cinema", asy
   assertEquals(closedWeekdays["cinema-do-centro"], ["tuesday", "wednesday"]);
   assertEquals(closedWeekdays["cine-alquimia"], []);
   assertEquals(closedWeekdays["cinemark-riomar"], []);
+});
+
+Deno.test("o plano traz os títulos na fonte resolvidos de cada cinema", async () => {
+  const { body } = await plan({ collection_type: "daily" });
+
+  for (const cinema of body.cinemas) {
+    assert(Array.isArray(cinema.resolved_source_titles), cinema.slug);
+    for (const resolved of cinema.resolved_source_titles) {
+      assertEquals(Object.keys(resolved).sort(), ["source_title", "tmdb_id"], cinema.slug);
+    }
+  }
 });
 
 Deno.test("a janela é hoje e os seis dias seguintes no fuso da cidade", async () => {

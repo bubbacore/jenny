@@ -269,6 +269,8 @@ Deno.test("a sessão guarda o preço de bilheteria por tipo de ingresso quando a
 });
 
 Deno.test("a leitura fica no histórico com o release da coleta, o início, o fim e as contagens", async () => {
+  // A source title new to every run, so its pending identification is new.
+  const run = crypto.randomUUID().slice(0, 8);
   const first = await read("cinema-do-centro", "official_site", [movie("a", 9400001)], [
     session("a", "2026-10-05T16:00"),
     session("a", "2026-10-05T18:00"),
@@ -280,7 +282,7 @@ Deno.test("a leitura fica no histórico com o release da coleta, o início, o fi
     started.body.reading_id,
     reading("cinema-do-centro", "official_site", [
       movie("a", 9400001),
-      movie("b", 9400002, { tmdb_search_top_id: 9400099 }),
+      movie("b", 9400002, { tmdb_search_top_id: 9400099, source_title: `Filme b ${run}` }),
     ], [
       session("a", "2026-10-05T16:00"),
       session("b", "2026-10-05T18:00"),
@@ -311,8 +313,12 @@ Deno.test("a leitura fica no histórico com o release da coleta, o início, o fi
     sessions_accepted: 1,
     sessions_retained: 1,
     previous_sessions: 2,
-    alerts: [],
+    alerts: recorded.body.alerts,
   });
+  assertEquals(
+    recorded.body.alerts.map((alert: any) => alert.subject),
+    [`pending-identification:cinema-do-centro:filme b ${run}`],
+  );
 });
 
 Deno.test("o registro recusa uma leitura que não confere com a reserva ou com o acervo", async () => {

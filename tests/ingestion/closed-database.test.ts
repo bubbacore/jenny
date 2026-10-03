@@ -28,6 +28,8 @@ Deno.test("a chave publicável não lê nenhuma tabela, visão ou função", asy
     "/movies",
     "/sessions",
     "/box_office_prices",
+    "/pending_identifications",
+    "/resolved_source_titles",
     "/site_cinemas",
     "/site_showtimes",
     "/site_movies",
