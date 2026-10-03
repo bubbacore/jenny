@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/bubbacore/jenny/compare/v0.4.0...v0.5.0) (2026-10-03)
+
+
+### Features
+
+* **ingestion:** add pending identification and its resolution ([e569574](https://github.com/bubbacore/jenny/commit/e5695748d83e198664460d5d260489e0eddaf05f))
+
 ## [0.4.0](https://github.com/bubbacore/jenny/compare/v0.3.0...v0.4.0) (2026-10-03)
 
 
