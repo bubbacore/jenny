@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.4.0](https://github.com/bubbacore/jenny/compare/v0.3.0...v0.4.0) (2026-10-03)
+
+
+### ⚠ BREAKING CHANGES
+
+* **ingestion:** start-reading requires collection_id, and collection-plan refuses chosen cinemas in a daily collection and requires them in a recollection.
+
+### Features
+
+* **ingestion:** add collections, automatic publication and summaries ([be8327b](https://github.com/bubbacore/jenny/commit/be8327b47ab5fddedd2f61a19024ef4c893a1d62))
+
 ## [0.3.0](https://github.com/bubbacore/jenny/compare/v0.2.0...v0.3.0) (2026-10-02)
 
 
