@@ -20,7 +20,7 @@ type Recorded =
   | {
     reading_id: string;
     result: "success" | "failure";
-    failure_type?: "error" | "incomplete" | "outdated";
+    failure_type?: "error" | "incomplete" | "outdated" | "retained";
     reason?: string;
     sessions: Record<string, number>;
     alerts: Alert[];
