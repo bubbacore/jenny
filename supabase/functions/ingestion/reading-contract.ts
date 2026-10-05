@@ -16,6 +16,13 @@ const localDateTime = z.string()
   .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/, { abort: true })
   .refine(isRealDateTime, { message: "Data ou hora inexistente." });
 
+export const sourceType = z.enum([
+  "ingresso_com",
+  "veloxtickets",
+  "cinesercla_site",
+  "official_site",
+]);
+
 const contentRating = z.enum(["L", "10", "12", "14", "16", "18"]);
 
 // The path of an image in TMDB, like /kqjL17yufvn9OVLyXYpvtyrFfak.jpg.
@@ -138,7 +145,7 @@ const Session = z.strictObject({
 
 const common = {
   cinema: slug,
-  source: z.enum(["ingresso_com", "veloxtickets", "cinesercla_site", "official_site"]),
+  source: sourceType,
   movies: z.array(Movie),
   sessions: z.array(Session),
 };

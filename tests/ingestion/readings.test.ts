@@ -106,6 +106,7 @@ Deno.test("uma leitura nova substitui tudo o que havia para o cinema", async () 
     format: "2d",
     tags: ["VIP"],
     prices: [],
+    other_tickets: false,
   }]);
   assertEquals(
     (await readView("site_movies", "tmdb_id=in.(9100001,9100002,9100003)")).map((m) => m.tmdb_id),
