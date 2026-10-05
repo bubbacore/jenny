@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.9.0](https://github.com/bubbacore/jenny/compare/v0.8.0...v0.9.0) (2026-10-05)
+
+
+### ⚠ BREAKING CHANGES
+
+* **ingestion:** an ok reading of the official site must carry post or no_new_post, and only it may carry them.
+
+### Features
+
+* **ingestion:** remember read posts and reuse them without a new post ([89e05f1](https://github.com/bubbacore/jenny/commit/89e05f1983ce600980106004cbc317e5d023466b))
+
 ## [0.8.0](https://github.com/bubbacore/jenny/compare/v0.7.0...v0.8.0) (2026-10-05)
 
 
