@@ -16,6 +16,79 @@ const localDateTime = z.string()
   .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/, { abort: true })
   .refine(isRealDateTime, { message: "Data ou hora inexistente." });
 
+const contentRating = z.enum(["L", "10", "12", "14", "16", "18"]);
+
+// The path of an image in TMDB, like /kqjL17yufvn9OVLyXYpvtyrFfak.jpg.
+export const tmdbImagePath = z.string().regex(/^\/[A-Za-z0-9_-]+\.[A-Za-z0-9]+$/);
+
+const imagePath = (description: string) =>
+  tmdbImagePath.describe(
+    `${description} A imagem precisa ter sido gravada antes com record-image.`,
+  );
+
+const Person = z.strictObject({
+  tmdb_id: tmdbId,
+  name: nonBlank,
+  photo_path: imagePath("O caminho da foto no TMDB, com 632 pixels de altura.").optional(),
+}).meta({ id: "Person" });
+
+const Genre = z.strictObject({
+  tmdb_id: tmdbId,
+  name: nonBlank.describe("O nome em português."),
+  english_name: nonBlank.describe("O nome em inglês do TMDB, como Science Fiction."),
+}).meta({ id: "Genre" });
+
+const Trailer = z.strictObject({
+  site: nonBlank.describe("O serviço do vídeo, como YouTube. A ingestão descarta os demais."),
+  key: nonBlank.describe("O identificador do vídeo no serviço."),
+  language: z.string().regex(/^[a-z]{2}$/).describe("A língua do vídeo no TMDB, como pt."),
+  version: z.enum(["subtitled", "dubbed"]).optional().describe(
+    "Só num trailer em português, classificado pelo nome do vídeo. Sem indicação, conta como dublado.",
+  ),
+  official: z.boolean(),
+  published_at: z.iso.datetime({ offset: true }),
+}).refine((trailer) => trailer.version === undefined || trailer.language === "pt", {
+  path: ["version"],
+  message: "A versão só vale para um trailer em português.",
+}).meta({ id: "Trailer" });
+
+const Tmdb = z.strictObject({
+  title: nonBlank.optional().describe("O título no Brasil."),
+  original_title: nonBlank.optional(),
+  imdb_id: z.string().regex(/^tt\d+$/).optional(),
+  overview: nonBlank.optional().describe("A sinopse em português."),
+  year: z.int().min(1870).max(2100).optional(),
+  countries: z.array(z.string().regex(/^[A-Z]{2}$/)).optional().describe(
+    "Os países de produção, em ISO 3166-1, como BR.",
+  ),
+  original_language: z.string().regex(/^[a-z]{2}$/).optional().describe(
+    "A língua original, em ISO 639-1, como pt.",
+  ),
+  genres: z.array(Genre).optional(),
+  runtime: z.int().positive().max(32_767).optional().describe("A duração em minutos."),
+  budget: z.int().nonnegative().optional().describe(
+    "O orçamento em dólares, como o TMDB o informa. O zero do TMDB é gravado como ausente.",
+  ),
+  revenue: z.int().nonnegative().optional().describe(
+    "A receita em dólares, como o TMDB a informa. O zero do TMDB é gravado como ausente.",
+  ),
+  content_rating: contentRating.optional().describe(
+    "A certificação do Brasil nas datas de lançamento do TMDB.",
+  ),
+  poster_path: imagePath("O caminho do pôster no TMDB, com 500 pixels de largura.").optional(),
+  trailers: z.array(Trailer).optional().describe(
+    "Os trailers do TMDB. A ingestão escolhe um só, do YouTube.",
+  ),
+  credits: z.strictObject({
+    cast: z.array(z.strictObject({
+      person: Person,
+      character: nonBlank.optional(),
+      order: z.int().nonnegative().max(MAX_INTEGER).describe("A ordem no elenco do TMDB."),
+    })).describe("O elenco. A ingestão guarda os cinco primeiros pela ordem."),
+    directors: z.array(z.strictObject({ person: Person })),
+  }).optional(),
+}).meta({ id: "Tmdb" });
+
 const Movie = z.strictObject({
   key: nonBlank.describe("Chave do filme dentro da leitura, citada pelas sessões."),
   source_title: nonBlank.describe("O título na fonte, como a fonte principal o publica."),
@@ -23,14 +96,13 @@ const Movie = z.strictObject({
   tmdb_search_top_id: tmdbId.nullable().describe(
     "O primeiro resultado da busca no TMDB por título e ano, ou null sem resultado.",
   ),
-  content_rating: z.enum(["L", "10", "12", "14", "16", "18"]).optional().describe(
+  content_rating: contentRating.optional().describe(
     "A classificação indicativa normalizada. Fica ausente quando a fonte não a publica ou publica outro valor.",
   ),
-  tmdb: z.strictObject({
-    title: nonBlank.optional().describe("O título no Brasil."),
-    original_title: nonBlank.optional(),
-  }).optional().describe(
-    "Os metadados do TMDB. Um filme novo traz todos; um filme conhecido, só os que o plano apontou como faltantes.",
+  tmdb: Tmdb.optional().describe(
+    "Os metadados do TMDB, com os créditos e os caminhos das imagens. Um filme novo traz todos " +
+      "os que o TMDB tem; um filme conhecido, só os que o plano apontou como faltantes. " +
+      "Num filme conhecido, a ingestão ignora os demais.",
   ),
 }).meta({ id: "Movie" });
 

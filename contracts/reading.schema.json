@@ -188,20 +188,8 @@
           ]
         },
         "tmdb": {
-          "description": "Os metadados do TMDB. Um filme novo traz todos; um filme conhecido, só os que o plano apontou como faltantes.",
-          "type": "object",
-          "properties": {
-            "title": {
-              "description": "O título no Brasil.",
-              "type": "string",
-              "pattern": "\\S"
-            },
-            "original_title": {
-              "type": "string",
-              "pattern": "\\S"
-            }
-          },
-          "additionalProperties": false
+          "description": "Os metadados do TMDB, com os créditos e os caminhos das imagens. Um filme novo traz todos os que o TMDB tem; um filme conhecido, só os que o plano apontou como faltantes. Num filme conhecido, a ingestão ignora os demais.",
+          "$ref": "#/$defs/Tmdb"
         }
       },
       "required": [
@@ -209,6 +197,242 @@
         "source_title",
         "tmdb_id",
         "tmdb_search_top_id"
+      ],
+      "additionalProperties": false
+    },
+    "Tmdb": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "description": "O título no Brasil.",
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "original_title": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "imdb_id": {
+          "type": "string",
+          "pattern": "^tt\\d+$"
+        },
+        "overview": {
+          "description": "A sinopse em português.",
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "year": {
+          "type": "integer",
+          "minimum": 1870,
+          "maximum": 2100
+        },
+        "countries": {
+          "description": "Os países de produção, em ISO 3166-1, como BR.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Z]{2}$"
+          }
+        },
+        "original_language": {
+          "description": "A língua original, em ISO 639-1, como pt.",
+          "type": "string",
+          "pattern": "^[a-z]{2}$"
+        },
+        "genres": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Genre"
+          }
+        },
+        "runtime": {
+          "description": "A duração em minutos.",
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 32767
+        },
+        "budget": {
+          "description": "O orçamento em dólares, como o TMDB o informa. O zero do TMDB é gravado como ausente.",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "revenue": {
+          "description": "A receita em dólares, como o TMDB a informa. O zero do TMDB é gravado como ausente.",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "content_rating": {
+          "description": "A certificação do Brasil nas datas de lançamento do TMDB.",
+          "type": "string",
+          "enum": [
+            "10",
+            "12",
+            "14",
+            "16",
+            "18",
+            "L"
+          ]
+        },
+        "poster_path": {
+          "type": "string",
+          "pattern": "^\\/[A-Za-z0-9_-]+\\.[A-Za-z0-9]+$",
+          "description": "O caminho do pôster no TMDB, com 500 pixels de largura. A imagem precisa ter sido gravada antes com record-image."
+        },
+        "trailers": {
+          "description": "Os trailers do TMDB. A ingestão escolhe um só, do YouTube.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Trailer"
+          }
+        },
+        "credits": {
+          "type": "object",
+          "properties": {
+            "cast": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "person": {
+                    "$ref": "#/$defs/Person"
+                  },
+                  "character": {
+                    "type": "string",
+                    "pattern": "\\S"
+                  },
+                  "order": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 2147483647,
+                    "description": "A ordem no elenco do TMDB."
+                  }
+                },
+                "required": [
+                  "person",
+                  "order"
+                ],
+                "additionalProperties": false
+              },
+              "description": "O elenco. A ingestão guarda os cinco primeiros pela ordem."
+            },
+            "directors": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "person": {
+                    "$ref": "#/$defs/Person"
+                  }
+                },
+                "required": [
+                  "person"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "cast",
+            "directors"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "Genre": {
+      "type": "object",
+      "properties": {
+        "tmdb_id": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 2147483647
+        },
+        "name": {
+          "type": "string",
+          "pattern": "\\S",
+          "description": "O nome em português."
+        },
+        "english_name": {
+          "type": "string",
+          "pattern": "\\S",
+          "description": "O nome em inglês do TMDB, como Science Fiction."
+        }
+      },
+      "required": [
+        "tmdb_id",
+        "name",
+        "english_name"
+      ],
+      "additionalProperties": false
+    },
+    "Trailer": {
+      "type": "object",
+      "properties": {
+        "site": {
+          "type": "string",
+          "pattern": "\\S",
+          "description": "O serviço do vídeo, como YouTube. A ingestão descarta os demais."
+        },
+        "key": {
+          "type": "string",
+          "pattern": "\\S",
+          "description": "O identificador do vídeo no serviço."
+        },
+        "language": {
+          "type": "string",
+          "pattern": "^[a-z]{2}$",
+          "description": "A língua do vídeo no TMDB, como pt."
+        },
+        "version": {
+          "description": "Só num trailer em português, classificado pelo nome do vídeo. Sem indicação, conta como dublado.",
+          "type": "string",
+          "enum": [
+            "subtitled",
+            "dubbed"
+          ]
+        },
+        "official": {
+          "type": "boolean"
+        },
+        "published_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+        }
+      },
+      "required": [
+        "site",
+        "key",
+        "language",
+        "official",
+        "published_at"
+      ],
+      "additionalProperties": false
+    },
+    "Person": {
+      "type": "object",
+      "properties": {
+        "tmdb_id": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 2147483647
+        },
+        "name": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "photo_path": {
+          "type": "string",
+          "pattern": "^\\/[A-Za-z0-9_-]+\\.[A-Za-z0-9]+$",
+          "description": "O caminho da foto no TMDB, com 632 pixels de altura. A imagem precisa ter sido gravada antes com record-image."
+        }
+      },
+      "required": [
+        "tmdb_id",
+        "name"
       ],
       "additionalProperties": false
     },
