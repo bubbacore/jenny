@@ -19,6 +19,15 @@ export function newWeek(): string {
   return addDays("2027-01-04", 7 * (runBlock * 100 + weeksTaken++));
 }
 
+// The catalog is shared by every run, so each run draws its own TMDB ids, far
+// from the fixed ids of the other tests. They also name the images.
+const tmdbIdBase = 1_000_000_000 + Math.floor(Math.random() * 10_000_000) * 100;
+let tmdbIdsTaken = 0;
+
+export function newTmdbId(): number {
+  return tmdbIdBase + tmdbIdsTaken++;
+}
+
 export function addDays(date: string, days: number): string {
   const day = new Date(`${date}T00:00:00Z`);
   day.setUTCDate(day.getUTCDate() + days);

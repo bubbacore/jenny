@@ -99,6 +99,15 @@ const Movie = z.strictObject({
   content_rating: contentRating.optional().describe(
     "A classificação indicativa normalizada. Fica ausente quando a fonte não a publica ou publica outro valor.",
   ),
+  overview: nonBlank.optional().describe("A sinopse, quando a fonte principal a publica."),
+  trailer: z.strictObject({
+    url: z.url().describe(
+      "O endereço do vídeo. A ingestão descarta o que não for do YouTube.",
+    ),
+    version: z.enum(["subtitled", "dubbed", "original"]).optional().describe(
+      "A versão, quando a fonte a indica. Sem ela, o trailer conta como dublado.",
+    ),
+  }).optional().describe("O trailer, quando a fonte principal o publica."),
   tmdb: Tmdb.optional().describe(
     "Os metadados do TMDB, com os créditos e os caminhos das imagens. Um filme novo traz todos " +
       "os que o TMDB tem; um filme conhecido, só os que o plano apontou como faltantes. " +

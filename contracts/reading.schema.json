@@ -187,6 +187,35 @@
             "L"
           ]
         },
+        "overview": {
+          "description": "A sinopse, quando a fonte principal a publica.",
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "trailer": {
+          "description": "O trailer, quando a fonte principal o publica.",
+          "type": "object",
+          "properties": {
+            "url": {
+              "type": "string",
+              "format": "uri",
+              "description": "O endereço do vídeo. A ingestão descarta o que não for do YouTube."
+            },
+            "version": {
+              "description": "A versão, quando a fonte a indica. Sem ela, o trailer conta como dublado.",
+              "type": "string",
+              "enum": [
+                "subtitled",
+                "dubbed",
+                "original"
+              ]
+            }
+          },
+          "required": [
+            "url"
+          ],
+          "additionalProperties": false
+        },
         "tmdb": {
           "description": "Os metadados do TMDB, com os créditos e os caminhos das imagens. Um filme novo traz todos os que o TMDB tem; um filme conhecido, só os que o plano apontou como faltantes. Num filme conhecido, a ingestão ignora os demais.",
           "$ref": "#/$defs/Tmdb"
