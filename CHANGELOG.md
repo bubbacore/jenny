@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/bubbacore/jenny/compare/v0.6.0...v0.7.0) (2026-10-05)
+
+
+### Features
+
+* **ingestion:** choose movie values by source reliability ([55d9967](https://github.com/bubbacore/jenny/commit/55d99674f3317605587a907e20c99e6312829735))
+
 ## [0.6.0](https://github.com/bubbacore/jenny/compare/v0.5.0...v0.6.0) (2026-10-05)
 
 
