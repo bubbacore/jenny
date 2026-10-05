@@ -98,7 +98,7 @@ Deno.test("uma leitura nova substitui tudo o que havia para o cinema", async () 
   assertEquals(second.status, 200);
   assertEquals(await showtimes("centerplex-parque-shopping"), [{
     cinema: "centerplex-parque-shopping",
-    movie: "filme-9100003",
+    movie: "movie-9100003",
     starts_at: "2026-10-08T19:00:00",
     date: "2026-10-08",
     room: "Sala 3",
@@ -200,9 +200,11 @@ Deno.test("um filme novo entra com o identificador do TMDB, os títulos do TMDB 
   const { status } = await read("cinemark-shopping-jardins", "ingresso_com", [
     movie("a", 9200001, {
       source_title: "AINDA ESTOU AQUI (NAC)",
-      tmdb: { title: "Ainda Estou Aqui", original_title: "Ainda Estou Aqui" },
+      tmdb: { title: "Ainda Estou Aqui", original_title: "Ainda Estou Aqui", year: 2024 },
     }),
-    movie("b", 9200002, { tmdb: { title: "Ainda Estou Aqui", original_title: "I'm Still Here" } }),
+    movie("b", 9200002, {
+      tmdb: { title: "Ainda Estou Aqui", original_title: "Ainda Estou Aqui", year: 2026 },
+    }),
   ], [
     session("a", "2026-10-05T19:00"),
     session("b", "2026-10-05T21:00"),
@@ -222,10 +224,10 @@ Deno.test("um filme novo entra com o identificador do TMDB, os títulos do TMDB 
         original_title: "Ainda Estou Aqui",
       },
       {
-        slug: "ainda-estou-aqui-9200002",
+        slug: "ainda-estou-aqui-2026",
         tmdb_id: 9200002,
         title: "Ainda Estou Aqui",
-        original_title: "I'm Still Here",
+        original_title: "Ainda Estou Aqui",
       },
     ],
   );
@@ -245,7 +247,7 @@ Deno.test("só são aceitas as sessões dos filmes cujo identificador coincide c
   assertEquals(status, 200);
   assertEquals(body.sessions, { received: 3, discarded: 0, accepted: 1, retained: 2 });
   assertEquals((await showtimes("cinesercla-praia-sul")).map((row) => row.movie), [
-    "filme-9300001",
+    "movie-9300001",
   ]);
   assertEquals(
     (await readView("site_movies", "tmdb_id=in.(9300001,9300002,9300003,9300099)")).map((m) =>
