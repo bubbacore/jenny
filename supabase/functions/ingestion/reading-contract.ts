@@ -143,9 +143,21 @@ const Session = z.strictObject({
   prices: z.array(Price).describe("Vazio quando o preço de bilheteria não pôde ser determinado."),
 }).meta({ id: "Session" });
 
+const PostPeriod = z.strictObject({
+  first_day: z.iso.date().describe("O primeiro dia, como 2026-10-01."),
+  last_day: z.iso.date().describe("O último dia, que não vem antes do primeiro."),
+}).refine((period) => period.last_day >= period.first_day, {
+  path: ["last_day"],
+  message: "O último dia não pode vir antes do primeiro.",
+}).meta({ id: "PostPeriod" });
+
 const Post = z.strictObject({
   url: z.url().describe("O link do post."),
   published_at: z.iso.datetime({ offset: true }).describe("A data de publicação do post."),
+  period: PostPeriod.describe(
+    "O período do post: os dias que ele cobre, lidos no post. Um dia do período sem sessões " +
+      "é dia sem sessões, e a leitura fica desatualizada quando hoje passa do último dia.",
+  ),
 }).meta({ id: "Post" });
 
 const common = {
@@ -176,7 +188,8 @@ export const Reading = z.discriminatedUnion("status", [
   description: "A programação completa de um cinema na janela, lida da fonte principal. " +
     "Além do schema, a ingestão recusa: chaves de filme repetidas, sessões que citam um filme " +
     "fora da leitura, sessões repetidas (mesmo filme do TMDB, início, sala, idioma e formato), " +
-    "marcadores de sala repetidos, ingressos na fonte repetidos na mesma sessão e datas inexistentes. " +
+    "marcadores de sala repetidos, ingressos na fonte repetidos na mesma sessão, datas inexistentes " +
+    "e um período do post com o último dia antes do primeiro. " +
     "Recusa também uma leitura ok do site oficial sem o post nem no_new_post, ou com os dois, " +
     "um post ou no_new_post numa leitura de outra fonte e uma leitura sem post novo com filmes " +
     "ou sessões.",

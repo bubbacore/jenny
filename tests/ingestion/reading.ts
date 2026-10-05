@@ -71,14 +71,25 @@ export function session(movieKey: string, startsAt: string, extra: Record<string
   };
 }
 
-// A post of its own, with a link no other run uses.
+// A post of its own, with a link no other run uses. Unless the test gives the
+// post period, it starts on the day of publication and does not end within
+// the weeks of the tests.
 let postsTaken = 0;
 
-export function post(publishedAt = "2026-10-01T10:00:00-03:00") {
+export function post(
+  publishedAt = "2026-10-01T10:00:00-03:00",
+  period = { first_day: publishedAt.slice(0, 10), last_day: "9999-12-31" },
+) {
   return {
     url: `https://cinemadocentro.com.br/confira-a-programacao-${runBlock}-${postsTaken++}/`,
     published_at: publishedAt,
+    period,
   };
+}
+
+// The post period from the first to the last day.
+export function period(firstDay: string, lastDay: string) {
+  return { first_day: firstDay, last_day: lastDay };
 }
 
 // A successful reading of the official site reads a post, which is a new one
