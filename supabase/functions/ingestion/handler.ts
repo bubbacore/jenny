@@ -9,6 +9,7 @@ import { recollectionCinemas } from "./recollection-cinemas.ts";
 import { recordImage } from "./record-image.ts";
 import { recordReading } from "./record-reading.ts";
 import { resolvePendingIdentification } from "./resolve-pending-identification.ts";
+import { resolvePendingTicketType } from "./resolve-pending-ticket-type.ts";
 import { recordSitePublication, recordSiteReversion } from "./site-publication.ts";
 import { startReading } from "./start-reading.ts";
 import { updateSourceReliability } from "./update-source-reliability.ts";
@@ -28,6 +29,7 @@ const operations: Record<string, { caller: Caller; run: Operation }> = {
   "record-reading": { caller: "hermes", run: recordReading },
   "recollection-cinemas": { caller: "hermes", run: recollectionCinemas },
   "resolve-pending-identification": { caller: "hermes", run: resolvePendingIdentification },
+  "resolve-pending-ticket-type": { caller: "hermes", run: resolvePendingTicketType },
   "finish-collection": { caller: "hermes", run: finishCollection },
   "collection-summary": { caller: "hermes", run: collectionSummary },
   "record-site-reversion": { caller: "hermes", run: recordSiteReversion },
