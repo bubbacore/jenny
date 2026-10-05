@@ -1,16 +1,7 @@
 // deno-lint-ignore-file no-explicit-any
 import { assert, assertEquals } from "@std/assert";
 import { apiUrl, callIngestion, publishableKey, readView, secretKey } from "./local.ts";
-import { at, newWeek, read, session } from "./reading.ts";
-
-// The catalog is shared by every run, so each run draws its own TMDB ids and
-// image paths, far from the fixed ids of the other tests.
-const runBase = 1_000_000_000 + Math.floor(Math.random() * 10_000_000) * 100;
-let idsTaken = 0;
-
-function newId(): number {
-  return runBase + idsTaken++;
-}
+import { at, newTmdbId as newId, newWeek, read, session } from "./reading.ts";
 
 // A 1x1 PNG.
 const PNG =
@@ -209,9 +200,10 @@ Deno.test("um filme novo grava os metadados, os créditos e as imagens enviados 
       },
       { tmdb_id: actor, name: "Selton Mello", character: "Rubens", photo: null },
     ],
+    content_rating: "14",
   });
-  assertEquals(await storedMovie(id, "budget_usd,revenue_usd,content_rating"), [
-    { budget_usd: 1_500_000, revenue_usd: 3_000_000_000, content_rating: "14" },
+  assertEquals(await storedMovie(id, "budget_usd,revenue_usd"), [
+    { budget_usd: 1_500_000, revenue_usd: 3_000_000_000 },
   ]);
 });
 

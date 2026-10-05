@@ -11,6 +11,7 @@ import { recordReading } from "./record-reading.ts";
 import { resolvePendingIdentification } from "./resolve-pending-identification.ts";
 import { recordSitePublication, recordSiteReversion } from "./site-publication.ts";
 import { startReading } from "./start-reading.ts";
+import { updateSourceReliability } from "./update-source-reliability.ts";
 
 export type Context = { database: SupabaseClient; now: Date };
 
@@ -31,6 +32,7 @@ const operations: Record<string, { caller: Caller; run: Operation }> = {
   "collection-summary": { caller: "hermes", run: collectionSummary },
   "record-site-reversion": { caller: "hermes", run: recordSiteReversion },
   "record-site-publication": { caller: "hermes", run: recordSitePublication },
+  "update-source-reliability": { caller: "hermes", run: updateSourceReliability },
   "daily-collection-status": { caller: "watchman", run: dailyCollectionStatus },
 };
 
