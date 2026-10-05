@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.10.0](https://github.com/bubbacore/jenny/compare/v0.9.0...v0.10.0) (2026-10-05)
+
+
+### ⚠ BREAKING CHANGES
+
+* **catalog:** the movie slug comes from the original title instead of the title in Brazil, and existing slugs are rewritten.
+
+### Features
+
+* **catalog:** derive the movie address from the original title ([fc190ec](https://github.com/bubbacore/jenny/commit/fc190ecf795365786436f1487bc0e989cf447a9a))
+
 ## [0.9.0](https://github.com/bubbacore/jenny/compare/v0.8.0...v0.9.0) (2026-10-05)
 
 
