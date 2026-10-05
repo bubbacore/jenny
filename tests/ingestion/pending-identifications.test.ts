@@ -52,7 +52,7 @@ Deno.test("um filme cujo identificador proposto difere do primeiro resultado da 
   assertEquals(body.result, "success");
   assertEquals(body.sessions, { received: 4, discarded: 0, accepted: 1, retained: 3 });
   assertEquals((await showtimes("cinemark-shopping-jardins")).map((row) => row.movie), [
-    "filme-9800001",
+    "movie-9800001",
   ]);
   assertEquals(alertsOf("pending-identification", body.alerts), [
     {
@@ -229,8 +229,8 @@ Deno.test("a resolução grava o título na fonte resolvido, devolve o cinema a 
   assertEquals(recollected.body.sessions.retained, 0);
   assertEquals(alertsOf("pending-identification", recollected.body.alerts), []);
   assertEquals((await showtimes("cine-alquimia")).map((row) => row.movie), [
-    "filme-9800041",
-    "filme-9800044",
+    "movie-9800041",
+    "movie-9800044",
   ]);
 
   // Another proposal for the same source title still uses the chosen movie.
@@ -241,7 +241,7 @@ Deno.test("a resolução grava o título na fonte resolvido, devolve o cinema a 
   ], at(day, "12:00"));
 
   assertEquals(otherProposal.body.result, "success");
-  assertEquals((await showtimes("cine-alquimia")).map((row) => row.movie), ["filme-9800044"]);
+  assertEquals((await showtimes("cine-alquimia")).map((row) => row.movie), ["movie-9800044"]);
   assertEquals(await readView("site_movies", "tmdb_id=eq.9800045"), []);
 
   const again = await resolve({ cinema: "cine-alquimia", source_title: title, tmdb_id: 9800044 });

@@ -177,7 +177,7 @@ Deno.test("um filme novo grava os metadados, os créditos e as imagens enviados 
   ]);
 
   assertEquals(await siteMovie(id), {
-    slug: `filme-${id}`,
+    slug: `movie-${id}`,
     tmdb_id: id,
     title: `Filme ${id}`,
     original_title: `Movie ${id}`,
@@ -468,6 +468,23 @@ Deno.test("o plano devolve os campos de metadados que faltam em cada filme conhe
   ]);
   assertEquals(known.get(complete), []);
   assert(!known.has(unknown));
+});
+
+Deno.test("um filme conhecido mantém o identificador quando o título original muda", async () => {
+  const id = newId();
+  await readMovies([catalogMovie("a", id, { year: 2025 })]);
+
+  await readMovies([{
+    key: "a",
+    source_title: "Filme a",
+    tmdb_id: id,
+    tmdb_search_top_id: id,
+    tmdb: { original_title: `Corrected ${id}` },
+  }]);
+
+  assertEquals(await storedMovie(id, "slug,original_title"), [
+    { slug: `movie-${id}`, original_title: `Movie ${id}` },
+  ]);
 });
 
 Deno.test("um filme conhecido ganha só os campos que faltavam", async () => {

@@ -121,8 +121,8 @@ Deno.test("uma leitura sem post novo reaproveita a programação do último post
   assertEquals(body.sessions, { received: 3, discarded: 1, accepted: 2, retained: 0 });
   assertEquals(body.alerts, []);
   assertEquals((await showtimes(CINEMA)).map((row) => [row.movie, row.date]), [
-    ["filme-9400111", thursday],
-    ["filme-9400112", friday],
+    ["movie-9400111", thursday],
+    ["movie-9400112", friday],
   ]);
 
   assertEquals(await history(postReading.body.reading_id), {
@@ -199,8 +199,8 @@ Deno.test("a programação reaproveitada segue as resoluções feitas depois da 
   assertEquals(body.result, "success");
   assertEquals(body.sessions, { received: 2, discarded: 0, accepted: 2, retained: 0 });
   assertEquals((await showtimes(CINEMA)).map((row) => row.movie), [
-    "filme-9400131",
-    "filme-9400132",
+    "movie-9400131",
+    "movie-9400132",
   ]);
 });
 
