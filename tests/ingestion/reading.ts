@@ -71,6 +71,18 @@ export function session(movieKey: string, startsAt: string, extra: Record<string
   };
 }
 
+// A post of its own, with a link no other run uses.
+let postsTaken = 0;
+
+export function post(publishedAt = "2026-10-01T10:00:00-03:00") {
+  return {
+    url: `https://cinemadocentro.com.br/confira-a-programacao-${runBlock}-${postsTaken++}/`,
+    published_at: publishedAt,
+  };
+}
+
+// A successful reading of the official site reads a post, which is a new one
+// unless the test brings its own post or says there is no new post.
 export function reading(
   cinema: string,
   source: string,
@@ -78,7 +90,17 @@ export function reading(
   sessions: unknown[],
   extra: Record<string, unknown> = {},
 ) {
-  return { cinema, source, status: "ok", movies, sessions, ...extra };
+  const readsPost = source === "official_site" && (extra.status ?? "ok") === "ok" &&
+    !("post" in extra) && !("no_new_post" in extra);
+  return {
+    cinema,
+    source,
+    status: "ok",
+    movies,
+    sessions,
+    ...(readsPost ? { post: post() } : {}),
+    ...extra,
+  };
 }
 
 // Starts a collection and returns its id.

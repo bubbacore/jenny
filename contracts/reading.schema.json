@@ -32,6 +32,15 @@
         "status": {
           "type": "string",
           "const": "ok"
+        },
+        "post": {
+          "description": "O post lido, numa leitura do site oficial com post novo. A fonte do post é a da leitura.",
+          "$ref": "#/$defs/Post"
+        },
+        "no_new_post": {
+          "description": "Indica, numa leitura do site oficial, que não há post novo. A leitura vai sem filmes nem sessões, e a ingestão reaproveita a programação do último post lido.",
+          "type": "boolean",
+          "const": true
         }
       },
       "required": [
@@ -141,7 +150,7 @@
     }
   ],
   "title": "Leitura",
-  "description": "A programação completa de um cinema na janela, lida da fonte principal. Além do schema, a ingestão recusa: chaves de filme repetidas, sessões que citam um filme fora da leitura, sessões repetidas (mesmo filme do TMDB, início, sala, idioma e formato), marcadores de sala repetidos, ingressos na fonte repetidos na mesma sessão e datas inexistentes.",
+  "description": "A programação completa de um cinema na janela, lida da fonte principal. Além do schema, a ingestão recusa: chaves de filme repetidas, sessões que citam um filme fora da leitura, sessões repetidas (mesmo filme do TMDB, início, sala, idioma e formato), marcadores de sala repetidos, ingressos na fonte repetidos na mesma sessão e datas inexistentes. Recusa também uma leitura ok do site oficial sem o post nem no_new_post, ou com os dois, um post ou no_new_post numa leitura de outra fonte e uma leitura sem post novo com filmes ou sessões.",
   "$defs": {
     "Movie": {
       "type": "object",
@@ -553,6 +562,27 @@
       "required": [
         "source_ticket",
         "price_cents"
+      ],
+      "additionalProperties": false
+    },
+    "Post": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "description": "O link do post."
+        },
+        "published_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$",
+          "description": "A data de publicação do post."
+        }
+      },
+      "required": [
+        "url",
+        "published_at"
       ],
       "additionalProperties": false
     }

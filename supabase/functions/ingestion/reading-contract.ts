@@ -143,6 +143,11 @@ const Session = z.strictObject({
   prices: z.array(Price).describe("Vazio quando o preço de bilheteria não pôde ser determinado."),
 }).meta({ id: "Session" });
 
+const Post = z.strictObject({
+  url: z.url().describe("O link do post."),
+  published_at: z.iso.datetime({ offset: true }).describe("A data de publicação do post."),
+}).meta({ id: "Post" });
+
 const common = {
   cinema: slug,
   source: sourceType,
@@ -153,15 +158,28 @@ const common = {
 const reason = nonBlank.describe("O motivo da falha.");
 
 export const Reading = z.discriminatedUnion("status", [
-  z.strictObject({ ...common, status: z.literal("ok") }),
+  z.strictObject({
+    ...common,
+    status: z.literal("ok"),
+    post: Post.optional().describe(
+      "O post lido, numa leitura do site oficial com post novo. A fonte do post é a da leitura.",
+    ),
+    no_new_post: z.literal(true).optional().describe(
+      "Indica, numa leitura do site oficial, que não há post novo. A leitura vai sem filmes nem " +
+        "sessões, e a ingestão reaproveita a programação do último post lido.",
+    ),
+  }),
   z.strictObject({ ...common, status: z.literal("error"), reason }),
   z.strictObject({ ...common, status: z.literal("incomplete"), reason }),
-]).superRefine(checkReferences).meta({
+]).superRefine(checkReferences).superRefine(checkPost).meta({
   title: "Leitura",
   description: "A programação completa de um cinema na janela, lida da fonte principal. " +
     "Além do schema, a ingestão recusa: chaves de filme repetidas, sessões que citam um filme " +
     "fora da leitura, sessões repetidas (mesmo filme do TMDB, início, sala, idioma e formato), " +
-    "marcadores de sala repetidos, ingressos na fonte repetidos na mesma sessão e datas inexistentes.",
+    "marcadores de sala repetidos, ingressos na fonte repetidos na mesma sessão e datas inexistentes. " +
+    "Recusa também uma leitura ok do site oficial sem o post nem no_new_post, ou com os dois, " +
+    "um post ou no_new_post numa leitura de outra fonte e uma leitura sem post novo com filmes " +
+    "ou sessões.",
 });
 
 export type Reading = z.infer<typeof Reading>;
@@ -244,6 +262,68 @@ function checkReferences(reading: ReadingShape, context: z.RefinementCtx) {
       })
     );
   });
+}
+
+type PostShape = ReadingShape & {
+  status: string;
+  source: string;
+  post?: z.infer<typeof Post>;
+  no_new_post?: true;
+};
+
+// Every successful reading of the official site reads a post or says there is
+// no new post, and only it does.
+function checkPost(reading: PostShape, context: z.RefinementCtx) {
+  if (reading.status !== "ok") return;
+
+  const { post, no_new_post } = reading;
+  if (reading.source !== "official_site") {
+    if (post) {
+      context.addIssue({
+        code: "custom",
+        path: ["post"],
+        message: "Só uma leitura do site oficial traz um post.",
+      });
+    }
+    if (no_new_post) {
+      context.addIssue({
+        code: "custom",
+        path: ["no_new_post"],
+        message: "Só uma leitura do site oficial indica que não há post novo.",
+      });
+    }
+    return;
+  }
+
+  if (!post && !no_new_post) {
+    context.addIssue({
+      code: "custom",
+      path: ["post"],
+      message:
+        "Uma leitura do site oficial traz o post lido ou a indicação de que não há post novo.",
+    });
+  }
+  if (post && no_new_post) {
+    context.addIssue({
+      code: "custom",
+      path: ["no_new_post"],
+      message: "Uma leitura com o post lido não indica que não há post novo.",
+    });
+  }
+  if (no_new_post && reading.movies.length > 0) {
+    context.addIssue({
+      code: "custom",
+      path: ["movies"],
+      message: "Uma leitura sem post novo vai sem filmes.",
+    });
+  }
+  if (no_new_post && reading.sessions.length > 0) {
+    context.addIssue({
+      code: "custom",
+      path: ["sessions"],
+      message: "Uma leitura sem post novo vai sem sessões.",
+    });
+  }
 }
 
 // The indexes of the values already seen earlier in the list.
