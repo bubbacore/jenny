@@ -111,19 +111,20 @@ Deno.test("uma leitura sem nenhuma sessão de hoje em diante, com algum dia de f
 });
 
 Deno.test("cada dia da janela tem um só estado: com sessões, dia sem funcionamento ou dia não divulgado", async () => {
-  // The Cinema do Centro is closed on Tuesdays and Wednesdays.
+  // The Cinema do Centro is closed on Wednesdays.
   const day = newWeek();
   const [, tuesday, wednesday, thursday, friday, saturday, sunday] = window(day);
 
   const { body } = await read("cinema-do-centro", "official_site", [movie("a", 9700003)], [
     session("a", `${day}T16:00`),
+    session("a", `${tuesday}T18:00`),
     session("a", `${thursday}T18:00`),
   ], at(day, "08:00"));
   assertEquals(body.result, "success");
 
   assertEquals(await cinemaDays("cinema-do-centro", at(day, "08:00")), [
     [day, "with_sessions"],
-    [tuesday, "closed"],
+    [tuesday, "with_sessions"],
     [wednesday, "closed"],
     [thursday, "with_sessions"],
     [friday, "not_announced"],
@@ -148,16 +149,16 @@ Deno.test("uma sessão em dia sem funcionamento é descartada e gera closed-day-
   ], at(day, "08:00"));
 
   assertEquals(body.result, "success");
-  assertEquals(body.sessions, { received: 3, discarded: 2, accepted: 1, retained: 0 });
+  assertEquals(body.sessions, { received: 3, discarded: 1, accepted: 2, retained: 0 });
   assertEquals(body.alerts, [{
     type: "closed-day-session",
     subject: "closed-day-session:cinema-do-centro",
     effect: "open",
-    text: `Cinema do Centro: 2 sessões foram descartadas em dia sem funcionamento (${
-      dayMonth(tuesday)
-    }, ${dayMonth(wednesday)}). Confira se os dias de funcionamento do cinema mudaram.`,
+    text: `Cinema do Centro: 1 sessão foi descartada em dia sem funcionamento (${
+      dayMonth(wednesday)
+    }). Confira se os dias de funcionamento do cinema mudaram.`,
   }]);
-  assertEquals((await showtimes("cinema-do-centro")).map((row) => row.date), [day]);
+  assertEquals((await showtimes("cinema-do-centro")).map((row) => row.date), [day, tuesday]);
 });
 
 Deno.test("uma queda de mais da metade das sessões aceita as sessões e gera session-drop", async () => {

@@ -57,7 +57,7 @@ Deno.test("o plano da coleta traz os dias sem funcionamento de cada cinema", asy
     body.cinemas.map((cinema: any) => [cinema.slug, cinema.closed_weekdays]),
   );
 
-  assertEquals(closedWeekdays["cinema-do-centro"], ["tuesday", "wednesday"]);
+  assertEquals(closedWeekdays["cinema-do-centro"], ["wednesday"]);
   assertEquals(closedWeekdays["cine-alquimia"], []);
   assertEquals(closedWeekdays["cinemark-riomar"], []);
 });
