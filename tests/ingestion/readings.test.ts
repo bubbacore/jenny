@@ -208,20 +208,26 @@ Deno.test("um filme novo entra com o identificador do TMDB, os títulos do TMDB 
   ]);
 
   assertEquals(status, 200);
-  assertEquals(await readView("site_movies", "tmdb_id=in.(9200001,9200002)&order=tmdb_id"), [
-    {
-      slug: "ainda-estou-aqui",
-      tmdb_id: 9200001,
-      title: "Ainda Estou Aqui",
-      original_title: "Ainda Estou Aqui",
-    },
-    {
-      slug: "ainda-estou-aqui-9200002",
-      tmdb_id: 9200002,
-      title: "Ainda Estou Aqui",
-      original_title: "I'm Still Here",
-    },
-  ]);
+  assertEquals(
+    await readView(
+      "site_movies",
+      "select=slug,tmdb_id,title,original_title&tmdb_id=in.(9200001,9200002)&order=tmdb_id",
+    ),
+    [
+      {
+        slug: "ainda-estou-aqui",
+        tmdb_id: 9200001,
+        title: "Ainda Estou Aqui",
+        original_title: "Ainda Estou Aqui",
+      },
+      {
+        slug: "ainda-estou-aqui-9200002",
+        tmdb_id: 9200002,
+        title: "Ainda Estou Aqui",
+        original_title: "I'm Still Here",
+      },
+    ],
+  );
 });
 
 Deno.test("só são aceitas as sessões dos filmes cujo identificador coincide com o primeiro resultado da busca", async () => {

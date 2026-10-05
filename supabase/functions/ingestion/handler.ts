@@ -6,6 +6,7 @@ import { dailyCollectionStatus } from "./daily-collection-status.ts";
 import { finishCollection } from "./finish-collection.ts";
 import { failure } from "./http.ts";
 import { recollectionCinemas } from "./recollection-cinemas.ts";
+import { recordImage } from "./record-image.ts";
 import { recordReading } from "./record-reading.ts";
 import { resolvePendingIdentification } from "./resolve-pending-identification.ts";
 import { recordSitePublication, recordSiteReversion } from "./site-publication.ts";
@@ -22,6 +23,7 @@ type Caller = "hermes" | "watchman";
 const operations: Record<string, { caller: Caller; run: Operation }> = {
   "collection-plan": { caller: "hermes", run: collectionPlan },
   "start-reading": { caller: "hermes", run: startReading },
+  "record-image": { caller: "hermes", run: recordImage },
   "record-reading": { caller: "hermes", run: recordReading },
   "recollection-cinemas": { caller: "hermes", run: recollectionCinemas },
   "resolve-pending-identification": { caller: "hermes", run: resolvePendingIdentification },
