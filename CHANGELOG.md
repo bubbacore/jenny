@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.0](https://github.com/bubbacore/jenny/compare/v0.7.0...v0.8.0) (2026-10-05)
+
+
+### Features
+
+* **ingestion:** keep pending ticket types and resolve them ([2b59973](https://github.com/bubbacore/jenny/commit/2b5997389aae7849d22e6753d3d8790628796748))
+
 ## [0.7.0](https://github.com/bubbacore/jenny/compare/v0.6.0...v0.7.0) (2026-10-05)
 
 
