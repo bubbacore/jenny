@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.11.0](https://github.com/bubbacore/jenny/compare/v0.10.1...v0.11.0) (2026-10-05)
+
+
+### ⚠ BREAKING CHANGES
+
+* **ingestion:** a post in the reading must carry its period, with a last day not before the first.
+
+### Features
+
+* **ingestion:** keep the post period and tell no sessions days ([d06ad65](https://github.com/bubbacore/jenny/commit/d06ad6596539e1d8787469b228874eeff9c2b624))
+
 ## [0.10.1](https://github.com/bubbacore/jenny/compare/v0.10.0...v0.10.1) (2026-10-05)
 
 
