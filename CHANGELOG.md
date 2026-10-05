@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.1](https://github.com/bubbacore/jenny/compare/v0.10.0...v0.10.1) (2026-10-05)
+
+
+### Bug Fixes
+
+* **db:** open the Cinema do Centro on Tuesdays ([8f09b16](https://github.com/bubbacore/jenny/commit/8f09b169fd4eb1b123adecf67c53b94b5be18835))
+
 ## [0.10.0](https://github.com/bubbacore/jenny/compare/v0.9.0...v0.10.0) (2026-10-05)
 
 
