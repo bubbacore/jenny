@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/bubbacore/jenny/compare/v0.5.0...v0.6.0) (2026-10-05)
+
+
+### Features
+
+* **ingestion:** add the catalog with people, credits, images and trailer ([9dc694d](https://github.com/bubbacore/jenny/commit/9dc694dd70c0f5940e7f89dba0bef0aedad282ca))
+
 ## [0.5.0](https://github.com/bubbacore/jenny/compare/v0.4.0...v0.5.0) (2026-10-03)
 
 
