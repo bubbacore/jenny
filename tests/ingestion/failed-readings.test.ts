@@ -8,6 +8,8 @@ import {
   dayMonth,
   movie,
   newWeek,
+  period,
+  post,
   read,
   session,
   showtimes,
@@ -110,16 +112,24 @@ Deno.test("uma leitura sem nenhuma sessão de hoje em diante, com algum dia de f
   }
 });
 
-Deno.test("cada dia da janela tem um só estado: com sessões, dia sem funcionamento ou dia não divulgado", async () => {
-  // The Cinema do Centro is closed on Wednesdays.
+Deno.test("cada dia da janela tem um só estado: com sessões, dia sem funcionamento, dia sem sessões ou dia não divulgado", async () => {
+  // The Cinema do Centro is closed on Wednesdays, and its post covers the
+  // days from Monday to Friday.
   const day = newWeek();
   const [, tuesday, wednesday, thursday, friday, saturday, sunday] = window(day);
 
-  const { body } = await read("cinema-do-centro", "official_site", [movie("a", 9700003)], [
-    session("a", `${day}T16:00`),
-    session("a", `${tuesday}T18:00`),
-    session("a", `${thursday}T18:00`),
-  ], at(day, "08:00"));
+  const { body } = await read(
+    "cinema-do-centro",
+    "official_site",
+    [movie("a", 9700003)],
+    [
+      session("a", `${day}T16:00`),
+      session("a", `${tuesday}T18:00`),
+      session("a", `${thursday}T18:00`),
+    ],
+    at(day, "08:00"),
+    { post: post(at(addDays(day, -5), "10:00"), period(day, friday)) },
+  );
   assertEquals(body.result, "success");
 
   assertEquals(await cinemaDays("cinema-do-centro", at(day, "08:00")), [
@@ -127,10 +137,24 @@ Deno.test("cada dia da janela tem um só estado: com sessões, dia sem funcionam
     [tuesday, "with_sessions"],
     [wednesday, "closed"],
     [thursday, "with_sessions"],
-    [friday, "not_announced"],
+    [friday, "no_sessions"],
     [saturday, "not_announced"],
     [sunday, "not_announced"],
   ]);
+});
+
+Deno.test("numa fonte sem post, um dia sem sessões em que o cinema funciona é dia não divulgado", async () => {
+  const day = newWeek();
+
+  const { body } = await read("cine-alquimia", "ingresso_com", [movie("a", 9700020)], [
+    session("a", `${day}T19:00`),
+  ], at(day, "08:00"));
+  assertEquals(body.result, "success");
+
+  assertEquals(
+    await cinemaDays("cine-alquimia", at(day, "08:00")),
+    window(day).map((date) => [date, date === day ? "with_sessions" : "not_announced"]),
+  );
 });
 
 Deno.test("uma sessão em dia sem funcionamento é descartada e gera closed-day-session", async () => {
