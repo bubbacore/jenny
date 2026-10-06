@@ -9,7 +9,7 @@ const MAX_INTEGER = 2_147_483_647;
 
 const nonBlank = z.string().regex(/\S/, { message: "Não pode ficar em branco." });
 export const slug = z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/);
-const tmdbId = z.int().positive().max(MAX_INTEGER);
+export const tmdbId = z.int().positive().max(MAX_INTEGER);
 
 // Local time in the cinema's city, without seconds or offset.
 const localDateTime = z.string()
@@ -33,7 +33,7 @@ const imagePath = (description: string) =>
     `${description} A imagem precisa ter sido gravada antes com record-image.`,
   );
 
-const Person = z.strictObject({
+export const Person = z.strictObject({
   tmdb_id: tmdbId,
   name: nonBlank,
   photo_path: imagePath("O caminho da foto no TMDB, com 632 pixels de altura.").optional(),
@@ -59,7 +59,7 @@ const Trailer = z.strictObject({
   message: "A versão só vale para um trailer em português.",
 }).meta({ id: "Trailer" });
 
-const Tmdb = z.strictObject({
+export const Tmdb = z.strictObject({
   title: nonBlank.optional().describe("O título no Brasil."),
   original_title: nonBlank.optional(),
   imdb_id: z.string().regex(/^tt\d+$/).optional(),

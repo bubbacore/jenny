@@ -9,6 +9,7 @@ import { failure } from "./http.ts";
 import { recollectionCinemas } from "./recollection-cinemas.ts";
 import { recordImage } from "./record-image.ts";
 import { recordReading } from "./record-reading.ts";
+import { reimport, reimportPlan } from "./reimport.ts";
 import { resolvePendingIdentification } from "./resolve-pending-identification.ts";
 import { resolvePendingTicketType } from "./resolve-pending-ticket-type.ts";
 import { recordSitePublication, recordSiteReversion } from "./site-publication.ts";
@@ -40,6 +41,8 @@ const operations: Record<string, { caller: Caller; run: Operation }> = {
   "update-ratings": { caller: "hermes", run: updateRatings },
   "update-cinema": { caller: "hermes", run: updateCinema },
   "decide-proposal": { caller: "hermes", run: decideProposal },
+  "reimport-plan": { caller: "hermes", run: reimportPlan },
+  "reimport": { caller: "hermes", run: reimport },
   "daily-collection-status": { caller: "watchman", run: dailyCollectionStatus },
 };
 
