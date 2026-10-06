@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { hasToken } from "./auth.ts";
+import { decideProposal, updateCinema } from "./cinema-proposals.ts";
 import { collectionPlan } from "./collection-plan.ts";
 import { collectionSummary } from "./collection-summary.ts";
 import { dailyCollectionStatus } from "./daily-collection-status.ts";
@@ -37,6 +38,8 @@ const operations: Record<string, { caller: Caller; run: Operation }> = {
   "record-site-publication": { caller: "hermes", run: recordSitePublication },
   "update-source-reliability": { caller: "hermes", run: updateSourceReliability },
   "update-ratings": { caller: "hermes", run: updateRatings },
+  "update-cinema": { caller: "hermes", run: updateCinema },
+  "decide-proposal": { caller: "hermes", run: decideProposal },
   "daily-collection-status": { caller: "watchman", run: dailyCollectionStatus },
 };
 
