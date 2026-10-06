@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.1](https://github.com/bubbacore/jenny/compare/v0.12.0...v0.12.1) (2026-10-06)
+
+
+### Bug Fixes
+
+* **ingestion:** repeat the pending identification alert each day ([7412e26](https://github.com/bubbacore/jenny/commit/7412e26a1e1b1b13e35815f374c6ddcd03667aef))
+
 ## [0.12.0](https://github.com/bubbacore/jenny/compare/v0.11.0...v0.12.0) (2026-10-06)
 
 
