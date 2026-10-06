@@ -201,6 +201,9 @@ Deno.test("um filme novo grava os metadados, os créditos e as imagens enviados 
       { tmdb_id: actor, name: "Selton Mello", character: "Rubens", photo: null },
     ],
     content_rating: "14",
+    imdb_rating: null,
+    imdb_votes: null,
+    tomatometer: null,
   });
   assertEquals(await storedMovie(id, "budget_usd,revenue_usd"), [
     { budget_usd: 1_500_000, revenue_usd: 3_000_000_000 },
