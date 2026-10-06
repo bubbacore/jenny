@@ -207,10 +207,61 @@ Deno.test("uma queda de mais da metade das sessões aceita as sessões e gera se
     type: "session-drop",
     subject: "session-drop:cinesercla-praia-sul",
     effect: "open",
-    text:
-      "Cinesercla Praia Sul: queda brusca de sessões, de 4 na última leitura com sucesso para 1 nesta. As sessões foram aceitas.",
+    text: "Cinesercla Praia Sul: queda brusca de sessões, de 4 na última leitura com sucesso, " +
+      "contando só as que ainda estão na janela, para 1 nesta. As sessões foram aceitas.",
   }]);
   assertEquals((await showtimes("cinesercla-praia-sul")).length, 1);
+});
+
+// A reading on Monday with 6 sessions that day and 4 on Tuesday. On Tuesday,
+// only the 4 are still in the window.
+async function readMondayAndTuesday(tmdbId: number) {
+  const monday = newWeek();
+  const tuesday = addDays(monday, 1);
+  const movies = [movie("a", tmdbId)];
+  const sessions = (date: string, hours: number[]) =>
+    hours.map((hour) => session("a", `${date}T${hour}:00`));
+
+  const first = await read("cinesercla-praia-sul", "cinesercla_site", movies, [
+    ...sessions(monday, [13, 14, 15, 16, 17, 18]),
+    ...sessions(tuesday, [14, 16, 18, 20]),
+  ], at(monday, "08:00"));
+  assertEquals(first.body.result, "success", JSON.stringify(first.body));
+
+  return (hours: number[]) =>
+    read(
+      "cinesercla-praia-sul",
+      "cinesercla_site",
+      movies,
+      sessions(tuesday, hours),
+      at(tuesday, "08:00"),
+    );
+}
+
+Deno.test("a queda brusca não conta as sessões que só passaram, e o histórico guarda a base na janela", async () => {
+  const readTuesday = await readMondayAndTuesday(9700011);
+
+  const { body } = await readTuesday([14, 16, 18, 20]);
+  assertEquals(body.result, "success");
+  assertEquals(body.sessions.accepted, 4);
+  assertEquals(body.alerts, []);
+
+  const [history] = await readView("readings", `id=eq.${body.reading_id}&select=previous_sessions`);
+  assertEquals(history, { previous_sessions: 4 });
+});
+
+Deno.test("a queda de mais da metade das sessões ainda na janela gera session-drop", async () => {
+  const readTuesday = await readMondayAndTuesday(9700012);
+
+  const { body } = await readTuesday([20]);
+  assertEquals(body.result, "success");
+  assertEquals(body.alerts, [{
+    type: "session-drop",
+    subject: "session-drop:cinesercla-praia-sul",
+    effect: "open",
+    text: "Cinesercla Praia Sul: queda brusca de sessões, de 4 na última leitura com sucesso, " +
+      "contando só as que ainda estão na janela, para 1 nesta. As sessões foram aceitas.",
+  }]);
 });
 
 Deno.test("a primeira falha do dia abre collection-failure, e o sucesso seguinte a resolve", async () => {

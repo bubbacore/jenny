@@ -206,10 +206,7 @@ Deno.test("uma leitura sem post novo no último dia do período não é desatual
   assertEquals(lastDay.status, 200, JSON.stringify(lastDay.body));
   assertEquals(lastDay.body.result, "success");
   assertEquals(lastDay.body.sessions, { received: 2, discarded: 2, accepted: 0, retained: 0 });
-  assertEquals(
-    lastDay.body.alerts.filter((alert: any) => alert.type === "collection-failure"),
-    [],
-  );
+  assertEquals(lastDay.body.alerts, []);
   assertEquals(
     await cinemaDays(CINEMA, at(tuesday, "08:00")),
     window(tuesday).map((date) => [
@@ -231,6 +228,18 @@ Deno.test("uma leitura sem post novo no último dia do período não é desatual
     await cinemaDays(CINEMA, at(wednesday, "08:00")),
     window(wednesday).map((date) => [date, "updating"]),
   );
+});
+
+Deno.test("as leituras sem post novo não geram session-drop pelas sessões que só passaram, até o último dia do período sem sessões", async () => {
+  const days = await readWeeklyPost(9400185, [0, 1, 2, 3, 4]);
+  const [, , saturday, sunday, monday, tuesday] = days;
+
+  for (const day of [saturday, sunday, monday, tuesday]) {
+    const { status, body } = await readWithoutNewPost(at(day, "08:00"));
+    assertEquals(status, 200, JSON.stringify(body));
+    assertEquals(body.result, "success");
+    assertEquals(body.alerts, [], day);
+  }
 });
 
 Deno.test("a leitura de um post cujo período já terminou é desatualizada", async () => {
