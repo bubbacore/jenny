@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.0](https://github.com/bubbacore/jenny/compare/v0.13.0...v0.14.0) (2026-10-06)
+
+
+### Features
+
+* **ingestion:** reimport the catalog and keep what vanished from TMDB ([90504e9](https://github.com/bubbacore/jenny/commit/90504e9b8c6092581e675ceaaff10f88d325a239))
+
 ## [0.13.0](https://github.com/bubbacore/jenny/compare/v0.12.1...v0.13.0) (2026-10-06)
 
 
