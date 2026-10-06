@@ -1,6 +1,6 @@
 begin;
 
-select plan(5);
+select plan(7);
 
 -- Dias da janela
 
@@ -128,6 +128,92 @@ select is(
   'A programação do último post lido não tem mais nenhuma sessão de hoje em diante, '
     || 'e o cinema funciona em algum dia da janela.',
   'e fica desatualizada pela regra das demais fontes quando não há mais nenhuma sessão de hoje em diante'
+);
+
+-- Leitura anterior sem as datas das sessões
+
+-- A reading recorded before the session dates were kept has none. The test
+-- erases them from a reading on a Monday with 4 sessions that day, on dates
+-- between the fixed dates of the ingestion tests and the weeks they draw at
+-- random. On Tuesday, the session drop compares with its recorded count.
+create temporary table dateless as
+select public.record_reading(
+  (
+    public.start_reading(
+      public.start_collection('manual', array['cinesercla-praia-sul'], true, '2026-12-21T08:00:00-03:00'),
+      'cinesercla-praia-sul',
+      '2026-12-21T08:00:00-03:00'
+    ) ->> 'reading_id'
+  )::uuid,
+  'v0.1.0',
+  '{
+    "cinema": "cinesercla-praia-sul",
+    "source": "cinesercla_site",
+    "status": "ok",
+    "movies": [{
+      "key": "a",
+      "source_title": "Filme sem datas",
+      "tmdb_id": 9800002,
+      "tmdb_search_top_id": 9800002,
+      "tmdb": {"title": "Filme 9800002", "original_title": "Movie 9800002"}
+    }],
+    "sessions": [
+      {"movie_key": "a", "starts_at": "2026-12-21T14:00", "tags": [], "prices": []},
+      {"movie_key": "a", "starts_at": "2026-12-21T16:00", "tags": [], "prices": []},
+      {"movie_key": "a", "starts_at": "2026-12-21T18:00", "tags": [], "prices": []},
+      {"movie_key": "a", "starts_at": "2026-12-21T20:00", "tags": [], "prices": []}
+    ]
+  }',
+  '2026-12-21T08:00:00-03:00'
+) as result;
+
+update public.readings set session_dates = null
+where id = (select (result ->> 'reading_id')::uuid from dateless);
+
+create temporary table after_dateless as
+select public.record_reading(
+  (
+    public.start_reading(
+      public.start_collection('manual', array['cinesercla-praia-sul'], true, '2026-12-22T08:00:00-03:00'),
+      'cinesercla-praia-sul',
+      '2026-12-22T08:00:00-03:00'
+    ) ->> 'reading_id'
+  )::uuid,
+  'v0.1.0',
+  '{
+    "cinema": "cinesercla-praia-sul",
+    "source": "cinesercla_site",
+    "status": "ok",
+    "movies": [{
+      "key": "a",
+      "source_title": "Filme sem datas",
+      "tmdb_id": 9800002,
+      "tmdb_search_top_id": 9800002
+    }],
+    "sessions": [{"movie_key": "a", "starts_at": "2026-12-22T20:00", "tags": [], "prices": []}]
+  }',
+  '2026-12-22T08:00:00-03:00'
+) as result;
+
+select is(
+  (
+    select alert ->> 'text'
+    from after_dateless, jsonb_array_elements(result -> 'alerts') as alert
+    where alert ->> 'type' = 'session-drop'
+  ),
+  'Cinesercla Praia Sul: queda brusca de sessões, de 4 na última leitura com sucesso para 1 nesta. '
+    || 'As sessões foram aceitas.',
+  'depois de uma leitura sem as datas das sessões, a queda brusca compara com a contagem registrada'
+);
+
+select is(
+  (
+    select previous_sessions
+    from public.readings
+    where id = (select (result ->> 'reading_id')::uuid from after_dateless)
+  ),
+  4,
+  'e o histórico guarda essa contagem como as sessões da leitura anterior'
 );
 
 select * from finish();

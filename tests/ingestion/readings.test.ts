@@ -306,7 +306,8 @@ Deno.test("a leitura fica no histórico com o release da coleta, o início, o fi
   const [history] = await readView(
     "readings",
     `id=eq.${started.body.reading_id}&select=status,collection_release,started_at,finished_at,` +
-      "sessions_received,sessions_discarded,sessions_accepted,sessions_retained,previous_sessions,alerts",
+      "sessions_received,sessions_discarded,sessions_accepted,sessions_retained,previous_sessions," +
+      "session_dates,alerts",
   );
   assertEquals({
     ...history,
@@ -322,6 +323,7 @@ Deno.test("a leitura fica no histórico com o release da coleta, o início, o fi
     sessions_accepted: 1,
     sessions_retained: 1,
     previous_sessions: 2,
+    session_dates: ["2026-10-05", "2026-10-05"],
     alerts: recorded.body.alerts,
   });
   assertEquals(
