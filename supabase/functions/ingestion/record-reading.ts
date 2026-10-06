@@ -33,7 +33,7 @@ type Recorded =
 
 // Records the reading of a reserved cinema and returns the result with the
 // alerts to send. A successful reading replaces the cinema's whole
-// programação, and a failed one erases it.
+// showtimes, and a failed one erases it.
 export async function recordReading(body: unknown, { database, now }: Context): Promise<Response> {
   const parsed = RecordReadingRequest.safeParse(body);
   if (!parsed.success) {
