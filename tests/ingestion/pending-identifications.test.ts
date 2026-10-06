@@ -1,7 +1,18 @@
 // deno-lint-ignore-file no-explicit-any
 import { assert, assertEquals } from "@std/assert";
 import { callIngestion, readView } from "./local.ts";
-import { at, cinemaDays, movie, newWeek, read, session, showtimes, window } from "./reading.ts";
+import {
+  addDays,
+  at,
+  cinemaDays,
+  dayMonth,
+  movie,
+  newWeek,
+  read,
+  session,
+  showtimes,
+  window,
+} from "./reading.ts";
 
 // Source titles new to every run, so each pending identification is new and
 // the remembered resolutions of earlier runs do not apply.
@@ -87,7 +98,7 @@ Deno.test("um filme cujo identificador proposto difere do primeiro resultado da 
   });
 });
 
-Deno.test("uma nova aparição atualiza a identificação pendente, sem alertar de novo", async () => {
+Deno.test("uma nova aparição no mesmo dia atualiza a identificação pendente, sem alertar de novo", async () => {
   const day = newWeek();
   const title = `Duna Parte 3 ${run}`;
   const diverging = (proposed: number) =>
@@ -110,6 +121,118 @@ Deno.test("uma nova aparição atualiza a identificação pendente, sem alertar 
   assertEquals(pending.proposed_tmdb_id, 9800022);
   assertEquals(pending.first_seen_at, new Date(at(day, "08:00")).toISOString());
   assertEquals(pending.last_seen_at, new Date(at(day, "10:00")).toISOString());
+});
+
+Deno.test("a primeira leitura do cinema em cada dia seguinte alerta de novo a identificação pendente, e as outras leituras do dia não repetem o alerta", async () => {
+  const day = newWeek();
+  const sessionDay = addDays(day, 3);
+  const title = `Missão Impossível (Dub) ${run}`;
+  const subject = `pending-identification:cinemark-riomar:missao impossivel (dub) ${run}`;
+  const reminder = (since: string) =>
+    `Cinemark RioMar: o título na fonte "${title}" continua em identificação pendente desde ` +
+    `${since}, com 2 sessões retidas. O filme proposto, o TMDB 9800072, difere do primeiro ` +
+    "resultado da busca no TMDB, o 9800073. Escolha o filme para liberar as sessões.";
+  const readAt = (clock: string) =>
+    read("cinemark-riomar", "ingresso_com", [
+      movie("match", 9800071),
+      movie("diverge", 9800072, { source_title: title, tmdb_search_top_id: 9800073 }),
+    ], [
+      session("match", `${sessionDay}T19:00`),
+      session("diverge", `${sessionDay}T20:00`),
+      session("diverge", `${sessionDay}T22:00`),
+    ], clock);
+
+  const first = await readAt(at(day, "08:00"));
+  assertEquals(
+    alertsOf("pending-identification", first.body.alerts).map((alert) => [
+      alert.subject,
+      alert.effect,
+    ]),
+    [[subject, "open"]],
+  );
+
+  const nextDay = await readAt(at(addDays(day, 1), "08:00"));
+  assertEquals(nextDay.body.result, "success");
+  assertEquals(alertsOf("pending-identification", nextDay.body.alerts), [{
+    type: "pending-identification",
+    subject,
+    effect: "open",
+    text: reminder(dayMonth(day)),
+  }]);
+
+  const sameDay = await readAt(at(addDays(day, 1), "10:00"));
+  assertEquals(alertsOf("pending-identification", sameDay.body.alerts), []);
+
+  const later = await readAt(at(addDays(day, 2), "07:00"));
+  assertEquals(alertsOf("pending-identification", later.body.alerts), [{
+    type: "pending-identification",
+    subject,
+    effect: "open",
+    text: reminder(dayMonth(day)),
+  }]);
+
+  const pending = await pendingIdentification(`missao impossivel (dub) ${run}`);
+  assertEquals([pending.status, pending.first_seen_at, pending.last_seen_at], [
+    "pending",
+    new Date(at(day, "08:00")).toISOString(),
+    new Date(at(addDays(day, 2), "07:00")).toISOString(),
+  ]);
+});
+
+Deno.test("o dia do alerta da identificação pendente segue o fuso da cidade do cinema", async () => {
+  const day = newWeek();
+  const nextDay = addDays(day, 1);
+  const title = `Pré-estreia: Batman ${run}`;
+  // Every session is retained, so each reading is a retained reading, and
+  // the later ones of the same day are its recollections.
+  const readAt = (clock: string) =>
+    read("cinesercla-premio", "cinesercla_site", [
+      movie("diverge", 9800082, { source_title: title, tmdb_search_top_id: 9800083 }),
+    ], [
+      session("diverge", `${addDays(day, 3)}T19:00`),
+    ], clock);
+
+  // 20:00 in Socorro is 23:00 UTC, and 23:30 there is already the next day
+  // in UTC, but still the same day in the city.
+  const first = await readAt(at(day, "20:00"));
+  assertEquals(alertsOf("pending-identification", first.body.alerts).length, 1);
+
+  const lateRecollection = await readAt(at(day, "23:30"));
+  assertEquals(lateRecollection.body.failure_type, "retained");
+  assertEquals(alertsOf("pending-identification", lateRecollection.body.alerts), []);
+
+  // 08:00 of the next day in the city is the same day in UTC as the last
+  // reading, and it is the first reading of a new day in the city.
+  const morning = await readAt(at(nextDay, "08:00"));
+  assertEquals(alertsOf("pending-identification", morning.body.alerts).map((alert) => alert.text), [
+    `Cinesercla Prêmio: o título na fonte "${title}" continua em identificação pendente desde ` +
+    `${dayMonth(day)}, com 1 sessão retida. O filme proposto, o TMDB 9800082, difere do ` +
+    "primeiro resultado da busca no TMDB, o 9800083. Escolha o filme para liberar as sessões.",
+  ]);
+});
+
+Deno.test("uma identificação resolvida não alerta nos dias seguintes", async () => {
+  const day = newWeek();
+  const title = `Coringa 3 ${run}`;
+  const readAt = (clock: string) =>
+    read("cine-alquimia", "ingresso_com", [
+      movie("diverge", 9800092, { source_title: title, tmdb_search_top_id: 9800093 }),
+    ], [
+      session("diverge", `${addDays(day, 3)}T20:00`),
+    ], clock);
+
+  const first = await readAt(at(day, "08:00"));
+  assertEquals(alertsOf("pending-identification", first.body.alerts).length, 1);
+  const resolved = await resolve(
+    { cinema: "cine-alquimia", source_title: title, tmdb_id: 9800092 },
+    at(day, "09:00"),
+  );
+  assertEquals(resolved.status, 200);
+
+  const nextDay = await readAt(at(addDays(day, 1), "08:00"));
+  assertEquals(nextDay.body.result, "success");
+  assertEquals(nextDay.body.sessions.retained, 0);
+  assertEquals(alertsOf("pending-identification", nextDay.body.alerts), []);
 });
 
 Deno.test("uma leitura com todas as sessões retidas é leitura retida e apaga a programação do cinema", async () => {
