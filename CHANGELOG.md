@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.13.0](https://github.com/bubbacore/jenny/compare/v0.12.1...v0.13.0) (2026-10-06)
+
+
+### Features
+
+* **ingestion:** update the cinema and decide the proposal ([8fe8c56](https://github.com/bubbacore/jenny/commit/8fe8c562225eeb7bfb4ababb7fe894407948af15))
+* **ingestion:** update the movie ratings ([61c2eaa](https://github.com/bubbacore/jenny/commit/61c2eaadb3939640630bf88845f6d1d1fb9b4e81))
+
 ## [0.12.1](https://github.com/bubbacore/jenny/compare/v0.12.0...v0.12.1) (2026-10-06)
 
 
