@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.0](https://github.com/bubbacore/jenny/compare/v0.11.0...v0.12.0) (2026-10-06)
+
+
+### Features
+
+* **ingestion:** compare the session drop within the window ([ad08ca4](https://github.com/bubbacore/jenny/commit/ad08ca4455301f05cefdb527bc7b1cb376817a83))
+
 ## [0.11.0](https://github.com/bubbacore/jenny/compare/v0.10.1...v0.11.0) (2026-10-05)
 
 
