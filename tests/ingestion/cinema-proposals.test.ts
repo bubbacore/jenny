@@ -86,6 +86,31 @@ Deno.test("a nota do Google de um cinema é atualizada com a data e chega à vis
   assertEquals([site.google_rating, site.google_reviews_count], [4.4, 3120]);
 });
 
+Deno.test("a nota do Google sem a quantidade de avaliações é gravada com a data e apaga a quantidade guardada", async () => {
+  const cinema = "cinema-do-centro";
+  const withReviews = await updateCinema({
+    cinema,
+    google_rating: { rating: 4.7, reviews: 860 },
+  }, "2026-10-08T09:00:00-03:00");
+  assertEquals(withReviews.status, 200, JSON.stringify(withReviews.body));
+
+  const { status, body } = await updateCinema({ cinema, google_rating: { rating: 4.8 } });
+
+  assertEquals(status, 200, JSON.stringify(body));
+  assertEquals(body, { alerts: [] });
+  const [row] = await readView(
+    "cinemas",
+    `slug=eq.${cinema}&select=google_rating,google_reviews_count,google_rating_updated_at`,
+  );
+  assertEquals(row, {
+    google_rating: 4.8,
+    google_reviews_count: null,
+    google_rating_updated_at: "2026-10-12T10:00:00+00:00",
+  });
+  const site = await siteCinema(cinema);
+  assertEquals([site.google_rating, site.google_reviews_count], [4.8, null]);
+});
+
 Deno.test("uma proposta nova abre a ocorrência da proposta, a mesma proposta de novo não, e ela fica fora das visões até a aprovação", async () => {
   const cinema = "cinemark-riomar";
   const approved = newProposal();
@@ -199,6 +224,16 @@ Deno.test("a atualização do cinema e a decisão da proposta recusam o que foge
       "/proposal/latitude",
     ],
   );
+
+  const reviewsOnly = await updateCinema({
+    cinema: "cine-alquimia",
+    google_rating: { reviews: 120 },
+  });
+  assertEquals(reviewsOnly.status, 400);
+  assertEquals(reviewsOnly.body.error.code, "invalid_request");
+  assertEquals(reviewsOnly.body.error.issues.map((issue: any) => issue.path), [
+    "/google_rating/rating",
+  ]);
 
   const unknown = await updateCinema({ cinema: "cinema-que-nao-existe", proposal: newProposal() });
   assertEquals([unknown.status, unknown.body.error.code], [400, "unknown_cinema"]);

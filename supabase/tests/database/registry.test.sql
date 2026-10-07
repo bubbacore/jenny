@@ -1,6 +1,6 @@
 begin;
 
-select plan(22);
+select plan(28);
 
 -- Configuração própria do tipo de fonte
 
@@ -161,6 +161,48 @@ select throws_ok(
   $$ update public.cinemas set other_popular_names = '{" "}' where slug = 'cinema-do-centro' $$,
   '23514', null,
   'recusa um nome popular em branco'
+);
+
+-- Nota do Google
+
+select lives_ok(
+  $$ update public.cinemas
+     set google_rating = 4.5, google_reviews_count = null, google_rating_updated_at = now()
+     where slug = 'cinema-do-centro' $$,
+  'aceita a nota do Google sem a quantidade de avaliações'
+);
+
+select throws_ok(
+  $$ update public.cinemas
+     set google_rating = null, google_reviews_count = 120, google_rating_updated_at = null
+     where slug = 'cinema-do-centro' $$,
+  '23514', null,
+  'recusa a quantidade de avaliações sem a nota do Google'
+);
+
+select throws_ok(
+  $$ update public.cinemas
+     set google_rating = 4.5, google_reviews_count = null, google_rating_updated_at = null
+     where slug = 'cinema-do-centro' $$,
+  '23514', null,
+  'recusa a nota do Google sem a data da atualização'
+);
+
+select lives_ok(
+  $$ select public.update_cinema('cinema-do-centro', '{"rating": 4.6, "reviews": 900}') $$,
+  'a atualização do cinema grava a nota do Google com a quantidade'
+);
+
+select lives_ok(
+  $$ select public.update_cinema('cinema-do-centro', '{"rating": 4.7}') $$,
+  'a atualização do cinema grava a nota do Google sem a quantidade'
+);
+
+select is(
+  (select (google_rating, google_reviews_count)::text from public.cinemas
+   where slug = 'cinema-do-centro'),
+  '(4.7,)',
+  'a nota do Google sem a quantidade apaga a quantidade guardada'
 );
 
 -- Visões

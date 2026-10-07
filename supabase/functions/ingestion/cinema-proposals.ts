@@ -12,7 +12,9 @@ const UpdateCinemaRequest = z.strictObject({
       (value) => Number.isInteger(Number((value * 10).toFixed(6))),
       { message: "Use no máximo uma casa decimal." },
     ),
-    reviews: z.int().positive().max(MAX_INTEGER).describe("A quantidade de avaliações."),
+    reviews: z.int().positive().max(MAX_INTEGER).optional().describe(
+      "A quantidade de avaliações, quando a página do lugar a mostra.",
+    ),
   }).optional().describe("A nota do Google, quando o Hermes a leu."),
   proposal: z.strictObject({
     latitude: z.number().min(-90).max(90),
