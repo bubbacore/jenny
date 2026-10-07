@@ -150,7 +150,7 @@
     }
   ],
   "title": "Leitura",
-  "description": "A programação completa de um cinema na janela, lida da fonte principal. Além do schema, a ingestão recusa: chaves de filme repetidas, sessões que citam um filme fora da leitura, sessões repetidas (mesmo filme do TMDB, início, sala, idioma e formato), marcadores de sala repetidos, ingressos na fonte repetidos na mesma sessão, datas inexistentes e um período do post com o último dia antes do primeiro. Recusa também uma leitura ok do site oficial sem o post nem no_new_post, ou com os dois, um post ou no_new_post numa leitura de outra fonte e uma leitura sem post novo com filmes ou sessões.",
+  "description": "A programação completa de um cinema na janela, lida da fonte principal. Além do schema, a ingestão recusa: chaves de filme repetidas, sessões que citam um filme fora da leitura, sessões repetidas (mesmo filme do TMDB, início, sala, idioma e formato), marcadores de sala repetidos, ingressos na fonte repetidos na mesma sessão, datas inexistentes, um período do post com o último dia antes do primeiro e o título ou o ano do primeiro resultado da busca num filme cuja busca não trouxe resultado. Recusa também uma leitura ok do site oficial sem o post nem no_new_post, ou com os dois, um post ou no_new_post numa leitura de outra fonte e uma leitura sem post novo com filmes ou sessões.",
   "$defs": {
     "Movie": {
       "type": "object",
@@ -183,6 +183,28 @@
             }
           ],
           "description": "O primeiro resultado da busca no TMDB por título e ano, ou null sem resultado."
+        },
+        "tmdb_title": {
+          "description": "O título no Brasil do filme proposto, para o alerta da identificação pendente.",
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "tmdb_year": {
+          "description": "O ano do filme proposto.",
+          "type": "integer",
+          "minimum": 1870,
+          "maximum": 2100
+        },
+        "tmdb_search_top_title": {
+          "description": "O título no Brasil do primeiro resultado da busca, só quando há resultado.",
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "tmdb_search_top_year": {
+          "description": "O ano do primeiro resultado da busca, só quando há resultado.",
+          "type": "integer",
+          "minimum": 1870,
+          "maximum": 2100
         },
         "content_rating": {
           "description": "A classificação indicativa normalizada. Fica ausente quando a fonte não a publica ou publica outro valor.",

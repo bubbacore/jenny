@@ -30,7 +30,8 @@ async function pendingIdentification(normalizedSourceTitle: string) {
   const rows = await readView(
     "pending_identifications",
     `normalized_source_title=eq.${encodeURIComponent(normalizedSourceTitle)}` +
-      "&select=source_title,proposed_tmdb_id,search_top_tmdb_id,reason,status,resolved_tmdb_id," +
+      "&select=source_title,proposed_tmdb_id,search_top_tmdb_id,proposed_title,proposed_year," +
+      "search_top_title,search_top_year,reason,status,resolved_tmdb_id," +
       "first_seen_at,last_seen_at,resolved_at,cinema:cinemas(slug)",
   );
   assertEquals(rows.length, 1, normalizedSourceTitle);
@@ -50,8 +51,19 @@ Deno.test("um filme cujo identificador proposto difere do primeiro resultado da 
   const cineclube = `Sessão  Cineclube ${run}`;
   const { status, body } = await read("cinemark-shopping-jardins", "ingresso_com", [
     movie("match", 9800001),
-    movie("diverge", 9800002, { source_title: legendado, tmdb_search_top_id: 9800003 }),
-    movie("no-result", 9800004, { source_title: cineclube, tmdb_search_top_id: null }),
+    movie("diverge", 9800002, {
+      source_title: legendado,
+      tmdb_search_top_id: 9800003,
+      tmdb_title: "Vingadores: Ultimato",
+      tmdb_year: 2019,
+      tmdb_search_top_title: "Vingadores: Guerra Infinita",
+      tmdb_search_top_year: 2018,
+    }),
+    movie("no-result", 9800004, {
+      source_title: cineclube,
+      tmdb_search_top_id: null,
+      tmdb_title: "Sessão Cineclube",
+    }),
   ], [
     session("match", `${day}T19:00`),
     session("diverge", `${day}T20:00`),
@@ -71,16 +83,24 @@ Deno.test("um filme cujo identificador proposto difere do primeiro resultado da 
       subject: `pending-identification:cinemark-shopping-jardins:sessao cineclube ${run}`,
       effect: "open",
       text: `Cinemark Shopping Jardins: o título na fonte "${cineclube}" ficou em identificação ` +
-        "pendente, com 1 sessão retida. A busca no TMDB não trouxe resultado, e o filme proposto " +
-        "foi o TMDB 9800004. Escolha o filme para liberar as sessões.",
+        "pendente, com 1 sessão retida. O filme proposto é Sessão Cineclube, TMDB 9800004, mas a " +
+        "busca pelo título na fonte e pelo ano não trouxe resultado. Aceite o filme proposto ou " +
+        "escolha outro para liberar as sessões.\n" +
+        "Filme proposto: https://www.themoviedb.org/movie/9800004",
+      proposed_movie: { tmdb_id: 9800004, title: "Sessão Cineclube" },
     },
     {
       type: "pending-identification",
       subject: `pending-identification:cinemark-shopping-jardins:vingadores (leg) ${run}`,
       effect: "open",
       text: `Cinemark Shopping Jardins: o título na fonte "${legendado}" ficou em identificação ` +
-        "pendente, com 2 sessões retidas. O filme proposto, o TMDB 9800002, difere do primeiro " +
-        "resultado da busca no TMDB, o 9800003. Escolha o filme para liberar as sessões.",
+        "pendente, com 2 sessões retidas. O filme proposto é Vingadores: Ultimato (2019), TMDB " +
+        "9800002, mas o primeiro resultado da busca pelo título na fonte e pelo ano é Vingadores: " +
+        "Guerra Infinita (2018), TMDB 9800003. Aceite o filme proposto ou escolha outro para " +
+        "liberar as sessões.\n" +
+        "Filme proposto: https://www.themoviedb.org/movie/9800002\n" +
+        "Primeiro resultado: https://www.themoviedb.org/movie/9800003",
+      proposed_movie: { tmdb_id: 9800002, title: "Vingadores: Ultimato", year: 2019 },
     },
   ]);
   assertEquals(await pendingIdentification(`vingadores (leg) ${run}`), {
@@ -88,8 +108,13 @@ Deno.test("um filme cujo identificador proposto difere do primeiro resultado da 
     source_title: legendado,
     proposed_tmdb_id: 9800002,
     search_top_tmdb_id: 9800003,
-    reason:
-      "O filme proposto, o TMDB 9800002, difere do primeiro resultado da busca no TMDB, o 9800003.",
+    proposed_title: "Vingadores: Ultimato",
+    proposed_year: 2019,
+    search_top_title: "Vingadores: Guerra Infinita",
+    search_top_year: 2018,
+    reason: "O filme proposto é Vingadores: Ultimato (2019), TMDB 9800002, mas o primeiro " +
+      "resultado da busca pelo título na fonte e pelo ano é Vingadores: Guerra Infinita (2018), " +
+      "TMDB 9800003.",
     status: "pending",
     resolved_tmdb_id: null,
     first_seen_at: new Date(at(day, "08:00")).toISOString(),
@@ -130,8 +155,11 @@ Deno.test("a primeira leitura do cinema em cada dia seguinte alerta de novo a id
   const subject = `pending-identification:cinemark-riomar:missao impossivel (dub) ${run}`;
   const reminder = (since: string) =>
     `Cinemark RioMar: o título na fonte "${title}" continua em identificação pendente desde ` +
-    `${since}, com 2 sessões retidas. O filme proposto, o TMDB 9800072, difere do primeiro ` +
-    "resultado da busca no TMDB, o 9800073. Escolha o filme para liberar as sessões.";
+    `${since}, com 2 sessões retidas. O filme proposto é o TMDB 9800072, mas o primeiro ` +
+    "resultado da busca pelo título na fonte e pelo ano é o TMDB 9800073. Aceite o filme " +
+    "proposto ou escolha outro para liberar as sessões.\n" +
+    "Filme proposto: https://www.themoviedb.org/movie/9800072\n" +
+    "Primeiro resultado: https://www.themoviedb.org/movie/9800073";
   const readAt = (clock: string) =>
     read("cinemark-riomar", "ingresso_com", [
       movie("match", 9800071),
@@ -158,6 +186,7 @@ Deno.test("a primeira leitura do cinema em cada dia seguinte alerta de novo a id
     subject,
     effect: "open",
     text: reminder(dayMonth(day)),
+    proposed_movie: { tmdb_id: 9800072 },
   }]);
 
   const sameDay = await readAt(at(addDays(day, 1), "10:00"));
@@ -169,6 +198,7 @@ Deno.test("a primeira leitura do cinema em cada dia seguinte alerta de novo a id
     subject,
     effect: "open",
     text: reminder(dayMonth(day)),
+    proposed_movie: { tmdb_id: 9800072 },
   }]);
 
   const pending = await pendingIdentification(`missao impossivel (dub) ${run}`);
@@ -206,8 +236,11 @@ Deno.test("o dia do alerta da identificação pendente segue o fuso da cidade do
   const morning = await readAt(at(nextDay, "08:00"));
   assertEquals(alertsOf("pending-identification", morning.body.alerts).map((alert) => alert.text), [
     `Cinesercla Prêmio: o título na fonte "${title}" continua em identificação pendente desde ` +
-    `${dayMonth(day)}, com 1 sessão retida. O filme proposto, o TMDB 9800082, difere do ` +
-    "primeiro resultado da busca no TMDB, o 9800083. Escolha o filme para liberar as sessões.",
+    `${dayMonth(day)}, com 1 sessão retida. O filme proposto é o TMDB 9800082, mas o primeiro ` +
+    "resultado da busca pelo título na fonte e pelo ano é o TMDB 9800083. Aceite o filme " +
+    "proposto ou escolha outro para liberar as sessões.\n" +
+    "Filme proposto: https://www.themoviedb.org/movie/9800082\n" +
+    "Primeiro resultado: https://www.themoviedb.org/movie/9800083",
   ]);
 });
 

@@ -82,6 +82,71 @@ Deno.test("o fim de uma recoleta publica só quando alguma leitura mudou de resu
   assertEquals((await finish(empty, at(day, "12:10"))).body.site_publication, false);
 });
 
+Deno.test("o fim de uma recoleta publica quando alguma leitura libera sessões retidas por identificação pendente", async () => {
+  const day = newWeek();
+  const title = `Carros (20º Aniversário) ${crypto.randomUUID().slice(0, 8)}`;
+  const movies = (proposed: number) => [
+    movie("a", 9800001),
+    movie("pending", proposed, { source_title: title, tmdb_search_top_id: null }),
+  ];
+  const sessions = [session("a", `${day}T19:00`), session("pending", `${day}T20:00`)];
+  await recordSitePublication(at(day, "05:00"));
+
+  const daily = await collect("daily", at(day, "06:00"));
+  const retained = await read(
+    "cinemark-riomar",
+    "ingresso_com",
+    movies(9800005),
+    sessions,
+    at(day, "06:01"),
+    {},
+    daily,
+  );
+  assertEquals(retained.body.sessions.retained, 1);
+  await finish(daily, at(day, "06:30"));
+
+  const resolved = await callIngestion("resolve-pending-identification", {
+    cinema: "cinemark-riomar",
+    source_title: title,
+    tmdb_id: 9800005,
+  }, { clock: at(day, "07:00") });
+  assertEquals(resolved.status, 200);
+
+  const released = await collect("recollection", at(day, "07:05"), {
+    cinemas: ["cinemark-riomar"],
+  });
+  const reading = await read(
+    "cinemark-riomar",
+    "ingresso_com",
+    movies(9800005),
+    sessions,
+    at(day, "07:06"),
+    {},
+    released,
+  );
+  assertEquals(reading.body.result, "success");
+  assertEquals(reading.body.sessions.retained, 0);
+  assertEquals(
+    (await readView("readings", `id=eq.${reading.body.reading_id}&select=sessions_released`))[0],
+    { sessions_released: 1 },
+  );
+  assertEquals((await finish(released, at(day, "07:10"))).body.site_publication, true);
+
+  const nothingNew = await collect("recollection", at(day, "08:00"), {
+    cinemas: ["cinemark-riomar"],
+  });
+  await read(
+    "cinemark-riomar",
+    "ingresso_com",
+    movies(9800005),
+    sessions,
+    at(day, "08:01"),
+    {},
+    nothingNew,
+  );
+  assertEquals((await finish(nothingNew, at(day, "08:10"))).body.site_publication, false);
+});
+
 Deno.test("uma coleta avulsa publica por padrão e não publica quando pedida assim", async () => {
   const day = newWeek();
   await recordSitePublication(at(day, "05:00"));
