@@ -449,6 +449,17 @@ Deno.test("uma leitura fora do contrato é recusada com o caminho de cada campo 
       (b) => b.reading.sessions[0].prices.push({ source_ticket: "INTEIRA", price_cents: 4000 }),
       ["/reading/sessions/0/prices/1/source_ticket"],
     ],
+    ["ano do filme proposto fora do intervalo", (b) => b.reading.movies[0].tmdb_year = 1500, [
+      "/reading/movies/0/tmdb_year",
+    ]],
+    [
+      "título do primeiro resultado sem resultado da busca",
+      (b) => {
+        b.reading.movies[0].tmdb_search_top_id = null;
+        b.reading.movies[0].tmdb_search_top_title = "Filme";
+      },
+      ["/reading/movies/0/tmdb_search_top_title"],
+    ],
     ["release fora do formato", (b) => b.collection_release = "0.1.0", ["/collection_release"]],
     ["leitura sem identificador", (b) => b.reading_id = "abc", ["/reading_id"]],
     ["sem a leitura", (b) => delete b.reading, ["/reading"]],

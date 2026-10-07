@@ -25,6 +25,8 @@ export const sourceType = z.enum([
 
 const contentRating = z.enum(["L", "10", "12", "14", "16", "18"]);
 
+const movieYear = z.int().min(1870).max(2100);
+
 // The path of an image in TMDB, like /kqjL17yufvn9OVLyXYpvtyrFfak.jpg.
 export const tmdbImagePath = z.string().regex(/^\/[A-Za-z0-9_-]+\.[A-Za-z0-9]+$/);
 
@@ -64,7 +66,7 @@ export const Tmdb = z.strictObject({
   original_title: nonBlank.optional(),
   imdb_id: z.string().regex(/^tt\d+$/).optional(),
   overview: nonBlank.optional().describe("A sinopse em português."),
-  year: z.int().min(1870).max(2100).optional(),
+  year: movieYear.optional(),
   countries: z.array(z.string().regex(/^[A-Z]{2}$/)).optional().describe(
     "Os países de produção, em ISO 3166-1, como BR.",
   ),
@@ -103,6 +105,16 @@ const Movie = z.strictObject({
   tmdb_search_top_id: tmdbId.nullable().describe(
     "O primeiro resultado da busca no TMDB por título e ano, ou null sem resultado.",
   ),
+  tmdb_title: nonBlank.optional().describe(
+    "O título no Brasil do filme proposto, para o alerta da identificação pendente.",
+  ),
+  tmdb_year: movieYear.optional().describe("O ano do filme proposto."),
+  tmdb_search_top_title: nonBlank.optional().describe(
+    "O título no Brasil do primeiro resultado da busca, só quando há resultado.",
+  ),
+  tmdb_search_top_year: movieYear.optional().describe(
+    "O ano do primeiro resultado da busca, só quando há resultado.",
+  ),
   content_rating: contentRating.optional().describe(
     "A classificação indicativa normalizada. Fica ausente quando a fonte não a publica ou publica outro valor.",
   ),
@@ -120,7 +132,15 @@ const Movie = z.strictObject({
       "os que o TMDB tem; um filme conhecido, só os que o plano apontou como faltantes. " +
       "Num filme conhecido, a ingestão ignora os demais.",
   ),
-}).meta({ id: "Movie" });
+}).refine(
+  (movie) =>
+    movie.tmdb_search_top_id !== null ||
+    (movie.tmdb_search_top_title === undefined && movie.tmdb_search_top_year === undefined),
+  {
+    path: ["tmdb_search_top_title"],
+    message: "O título e o ano do primeiro resultado só valem quando a busca trouxe resultado.",
+  },
+).meta({ id: "Movie" });
 
 const Price = z.strictObject({
   source_ticket: nonBlank.describe("O ingresso na fonte, como a fonte o chama."),
@@ -188,8 +208,9 @@ export const Reading = z.discriminatedUnion("status", [
   description: "A programação completa de um cinema na janela, lida da fonte principal. " +
     "Além do schema, a ingestão recusa: chaves de filme repetidas, sessões que citam um filme " +
     "fora da leitura, sessões repetidas (mesmo filme do TMDB, início, sala, idioma e formato), " +
-    "marcadores de sala repetidos, ingressos na fonte repetidos na mesma sessão, datas inexistentes " +
-    "e um período do post com o último dia antes do primeiro. " +
+    "marcadores de sala repetidos, ingressos na fonte repetidos na mesma sessão, datas inexistentes, " +
+    "um período do post com o último dia antes do primeiro e o título ou o ano do primeiro " +
+    "resultado da busca num filme cuja busca não trouxe resultado. " +
     "Recusa também uma leitura ok do site oficial sem o post nem no_new_post, ou com os dois, " +
     "um post ou no_new_post numa leitura de outra fonte e uma leitura sem post novo com filmes " +
     "ou sessões.",
