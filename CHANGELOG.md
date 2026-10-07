@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.15.0](https://github.com/bubbacore/jenny/compare/v0.14.0...v0.15.0) (2026-10-07)
+
+
+### Features
+
+* **ingestion:** accept the Google rating without the number of reviews ([d1fbf87](https://github.com/bubbacore/jenny/commit/d1fbf871eb5c3c1598ec663c8c288c863e8a67a4))
+
 ## [0.14.0](https://github.com/bubbacore/jenny/compare/v0.13.0...v0.14.0) (2026-10-06)
 
 
