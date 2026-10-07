@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.16.0](https://github.com/bubbacore/jenny/compare/v0.15.0...v0.16.0) (2026-10-07)
+
+
+### Features
+
+* **ingestion:** name the proposed movie and publish released sessions ([f5688bf](https://github.com/bubbacore/jenny/commit/f5688bfc218ce62a535efff399ba4687458a163f))
+
 ## [0.15.0](https://github.com/bubbacore/jenny/compare/v0.14.0...v0.15.0) (2026-10-07)
 
 
