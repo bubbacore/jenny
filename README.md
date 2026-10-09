@@ -77,6 +77,4 @@ O fluxo compartilhado está no [runbook de releases do Bubba](https://github.com
 
 ## Como contribuir
 
-- **Spec primeiro:** implemente só tickets de uma spec ou de um agent brief aprovado.
-- **Commits:** siga o [Conventional Commits](https://www.conventionalcommits.org/pt-br/v1.0.0/), com a mensagem em inglês e no imperativo. Mantenha o assunto abaixo de 72 caracteres, faça uma mudança lógica por commit e cite o ticket no rodapé, como `Refs JAM-12`.
-- **Segredos:** chaves e tokens nunca entram no repositório. O token do Hermes fica no segredo `INGESTION_HERMES_TOKEN` da ingestão, e o do vigia da coleta, no `INGESTION_WATCHMAN_TOKEN`, os dois definidos pelo dono no Supabase.
+O ambiente, as verificações locais, as convenções do código e dos testes e as regras de commits e segredos estão no [CONTRIBUTING.md](CONTRIBUTING.md).
