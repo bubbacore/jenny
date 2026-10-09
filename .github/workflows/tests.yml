@@ -33,6 +33,9 @@ jobs:
       - name: Start local Supabase
         run: supabase start -x studio,realtime,imgproxy,mailpit,logflare,vector,supavisor,postgres-meta
 
+      - name: Lint database functions
+        run: supabase db lint --local --schema public,private --level warning --fail-on warning
+
       - name: Run database tests
         run: supabase test db
 
