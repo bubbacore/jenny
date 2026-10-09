@@ -6,8 +6,9 @@ Este guia reúne o que vale para qualquer mudança neste repositório, feita por
 
 - **Spec primeiro:** implemente só tickets de uma spec ou de um agent brief aprovado.
 - **Commits:** siga o [Conventional Commits](https://www.conventionalcommits.org/pt-br/v1.0.0/), com a mensagem em inglês e no imperativo. Mantenha o assunto abaixo de 72 caracteres, faça uma mudança lógica por commit e cite o ticket no rodapé, como `Refs JAM-12`. Marque com `!` ou `BREAKING CHANGE` o commit que quebra um contrato ou um comportamento esperado.
+- **Escopos dos commits:** use `db` para as migrations e as funções do banco e `ingestion` para a Edge Function, como em `fix(ingestion): ...`. Um commit sem escopo serve ao repositório inteiro, como o da CI.
 - **Segredos:** chaves e tokens nunca entram no repositório. O token do Hermes fica no segredo `INGESTION_HERMES_TOKEN` da ingestão, e o do vigia da coleta, no `INGESTION_WATCHMAN_TOKEN`, os dois definidos pelo dono no Supabase.
-- **Idioma:** o código, os comentários e os commits ficam em inglês, e o que o dono, o público e o Hermes leem fica em português, conforme a [ADR 0011](https://github.com/bubbacore/dan/blob/main/docs/adr/0011-codigo-em-ingles-e-textos-em-portugues.md) do `bubbacore/dan`. Os termos do glossário usam o nome em inglês fixado no `CONTEXT.md`.
+- **Idioma:** o código, os comentários e os commits ficam em inglês, e o que o dono, o público e o Hermes leem fica em português, conforme a [ADR 0012](https://github.com/bubbacore/dan/blob/main/docs/adr/0012-codigo-e-prs-em-ingles-e-textos-em-portugues.md) do `bubbacore/dan`. Os termos do glossário usam o nome em inglês fixado no `CONTEXT.md`.
 
 ## Ambiente e verificações locais
 
@@ -36,11 +37,12 @@ deno task test
 
 O `deno fmt` e o `deno lint` cuidam da forma. Além deles:
 
-- **Uma operação por módulo:** cada operação da ingestão fica num arquivo com o nome dela em `supabase/functions/ingestion/`, como `start-reading.ts`, e exporta uma função `(body: unknown, context: Context) => Promise<Response>`. O `handler.ts` liga o nome da operação à função e diz quem pode chamá-la, o Hermes ou o vigia da coleta.
+- **Um módulo por assunto:** cada assunto da ingestão fica num arquivo em `supabase/functions/ingestion/`, com o nome do assunto, e reúne as operações dele que dividem o mesmo contrato. Um assunto de uma só operação leva o nome dela, como `start-reading.ts`; um de mais operações leva o nome do assunto, como `cinema-proposals.ts`, com `updateCinema` e `decideProposal`. Cada operação é uma função exportada `(body: unknown, context: Context) => Promise<Response>`. O `handler.ts` liga o nome da operação à função e diz quem pode chamá-la, o Hermes ou o vigia da coleta.
 - **Validação pelo Zod:** cada módulo declara o esquema da requisição com `z.strictObject`, que recusa campos desconhecidos, valida o corpo com `safeParse` e, na falha, responde com `invalidRequest`, de `http.ts`, que devolve uma questão por campo errado com o caminho em JSON Pointer.
 - **Recusas com `code` tipado:** o resultado da função do banco é um tipo união com o sucesso e `{ refusal: { code: ... } }`, cada `code` como literal em `snake_case`. A ingestão traduz cada recusa com `failure(status, code, message)`.
 - **Mensagens ao dono em português:** as mensagens de erro, as descrições dos campos do contrato (`.describe(...)`) e os alertas ficam em português, com os termos do glossário. Os logs (`console.error`) e os comentários ficam em inglês.
-- **Divisão das regras:** o TypeScript valida a forma da requisição, aplica as regras que não precisam do banco e traduz o resultado em resposta HTTP. As regras que leem ou gravam dados, como a janela, a política de falhas, as recoletas e os alertas, ficam nas funções do banco, chamadas por `database.rpc(...)`, em geral uma só por requisição, para que a operação inteira rode numa transação. Um `error` do `rpc` é lançado e vira `internal_error`.
+- **Divisão das regras:** o TypeScript valida a forma da requisição, aplica as regras que não precisam do banco e traduz o resultado em resposta HTTP. As regras que leem ou gravam dados, como a janela, a política de falhas, as recoletas e os alertas, ficam nas funções do banco, chamadas por `database.rpc(...)`, uma só por requisição, para que a operação inteira rode numa transação. Um `error` do `rpc` é lançado e vira `internal_error`.
+  - Exceção conhecida: o plano da coleta, em `collection-plan.ts`, chama `collection_plan` e `start_collection` em duas transações, porque valida entre as duas chamadas se os cinemas escolhidos estão no plano e recusa os que faltam com `unknown_cinema`.
 - **Comentários:** cada função exportada tem um comentário acima dela que explica o porquê.
 
 ## SQL e migrations
@@ -58,6 +60,7 @@ O `deno fmt` e o `deno lint` cuidam da forma. Além deles:
 
 - Índices simples: `<tabela>_<colunas>_idx`, como `readings_cinema_id_started_at_idx`.
 - Índices únicos parciais e constraints: o nome da tabela seguido da regra, como `readings_one_in_progress_per_cinema` e `readings_success_is_complete`.
+  - Exceção conhecida: a constraint `suspensions_end_has_one_request`, da tabela `public.automatic_publication_suspensions`, não começa pelo nome da tabela. Ela fica assim porque a migration que a cria já foi aplicada e é registro.
 
 ### Migrations
 
