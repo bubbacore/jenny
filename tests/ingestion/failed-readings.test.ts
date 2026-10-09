@@ -13,6 +13,7 @@ import {
   read,
   session,
   showtimes,
+  start,
   window,
 } from "./reading.ts";
 
@@ -313,7 +314,7 @@ Deno.test("a primeira falha do dia abre collection-failure, e o sucesso seguinte
   assertEquals(nextDay.body.alerts, failed("erro", "A fonte não respondeu"));
 });
 
-Deno.test("os cinemas para recoleta são os de última leitura do dia com falha, até as 22h", async () => {
+Deno.test("os cinemas para recoleta são os de última leitura do dia com falha ou sem leitura terminada no dia, até as 22h", async () => {
   const day = newWeek();
   const sunday = addDays(day, -1);
   const movies = [movie("a", 9700007)];
@@ -321,18 +322,34 @@ Deno.test("os cinemas para recoleta são os de última leitura do dia com falha,
   const recollection = (time: string) =>
     callIngestion("recollection-cinemas", {}, { clock: at(day, time) });
 
-  await read("centerplex-parque-shopping", "veloxtickets", [], [], at(sunday, "20:00"), error);
+  // Read the day before only, and not read at all on the day.
+  await read("centerplex-parque-shopping", "veloxtickets", movies, sessions, at(sunday, "20:00"));
   await read("cinemark-shopping-jardins", "ingresso_com", [], [], at(day, "06:00"), error);
   await read("cinesercla-premio", "cinesercla_site", [], [], at(day, "06:05"), error);
+  // Reserved and never recorded: the reservation expires at 06:36.
+  const reserved = await start("cinesercla-praia-sul", at(day, "06:06"));
+  assertEquals(reserved.status, 201, JSON.stringify(reserved.body));
   await read("cinemark-riomar", "ingresso_com", [], [], at(day, "06:10"), error);
+  await read("cine-alquimia", "ingresso_com", movies, sessions, at(day, "06:20"));
   await read("cinemark-riomar", "ingresso_com", movies, sessions, at(day, "08:00"));
 
   const morning = await recollection("08:30");
   assertEquals(morning.status, 200);
-  assertEquals(morning.body, { cinemas: ["cinemark-shopping-jardins", "cinesercla-premio"] });
+  assertEquals(morning.body, {
+    cinemas: [
+      "centerplex-parque-shopping",
+      "cinema-do-centro",
+      "cinemark-shopping-jardins",
+      "cinesercla-praia-sul",
+      "cinesercla-premio",
+    ],
+  });
 
   await read("cinemark-shopping-jardins", "ingresso_com", movies, sessions, at(day, "10:00"));
-  assertEquals((await recollection("21:59")).body, { cinemas: ["cinesercla-premio"] });
+  await read("cinesercla-praia-sul", "cinesercla_site", movies, sessions, at(day, "10:05"));
+  assertEquals((await recollection("21:59")).body, {
+    cinemas: ["centerplex-parque-shopping", "cinema-do-centro", "cinesercla-premio"],
+  });
   assertEquals((await recollection("22:00")).body, { cinemas: [] });
 
   const unknownField = await callIngestion("recollection-cinemas", { cinemas: [] });
