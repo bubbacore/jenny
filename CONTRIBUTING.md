@@ -8,7 +8,7 @@ Este guia reúne o que vale para qualquer mudança neste repositório, feita por
 - **Commits:** siga o [Conventional Commits](https://www.conventionalcommits.org/pt-br/v1.0.0/), com a mensagem em inglês e no imperativo. Mantenha o assunto abaixo de 72 caracteres, faça uma mudança lógica por commit e cite o ticket no rodapé, como `Refs JAM-12`. Marque com `!` ou `BREAKING CHANGE` o commit que quebra um contrato ou um comportamento esperado.
 - **Escopos dos commits:** use `db` para as migrations e as funções do banco e `ingestion` para a Edge Function, como em `fix(ingestion): ...`. Um commit sem escopo serve ao repositório inteiro, como o da CI.
 - **Segredos:** chaves e tokens nunca entram no repositório. O token do Hermes fica no segredo `INGESTION_HERMES_TOKEN` da ingestão, e o do vigia da coleta, no `INGESTION_WATCHMAN_TOKEN`, os dois definidos pelo dono no Supabase.
-- **Idioma:** o código, os comentários e os commits ficam em inglês, e o que o dono, o público e o Hermes leem fica em português, conforme a [ADR 0012](https://github.com/bubbacore/dan/blob/main/docs/adr/0012-codigo-e-prs-em-ingles-e-textos-em-portugues.md) do `bubbacore/dan`. Os termos do glossário usam o nome em inglês fixado no `CONTEXT.md`.
+- **Idioma:** o código, os comentários, os commits e o título e a descrição dos PRs ficam em inglês, e o que o dono, o público e o Hermes leem fica em português, como o relato do trabalho no comentário do ticket no Linear, conforme a [ADR 0012](https://github.com/bubbacore/dan/blob/main/docs/adr/0012-codigo-e-prs-em-ingles-e-textos-em-portugues.md) do `bubbacore/dan`. Os termos do glossário usam o nome em inglês fixado no `CONTEXT.md`.
 
 ## Ambiente e verificações locais
 
