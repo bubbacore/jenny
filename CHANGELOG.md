@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.16.1](https://github.com/bubbacore/jenny/compare/v0.16.0...v0.16.1) (2026-10-09)
+
+
+### Bug Fixes
+
+* **ingestion:** recollect cinemas without a finished reading ([0f16806](https://github.com/bubbacore/jenny/commit/0f1680600ceb52d8db2bed7582a0c6f767fdbc89))
+
 ## [0.16.0](https://github.com/bubbacore/jenny/compare/v0.15.0...v0.16.0) (2026-10-07)
 
 
