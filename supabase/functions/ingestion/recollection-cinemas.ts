@@ -4,8 +4,9 @@ import { invalidRequest, json } from "./http.ts";
 
 const RecollectionCinemasRequest = z.strictObject({});
 
-// The cinemas whose last reading of the day failed, for the Hermes to read
-// again. The list is empty from 22h on, in each cinema's city.
+// The active cinemas whose last finished reading of the day failed or that
+// have no finished reading on the day yet, for the Hermes to read again. The
+// list is empty from 22h on, in each cinema's city.
 export async function recollectionCinemas(
   body: unknown,
   { database, now }: Context,
