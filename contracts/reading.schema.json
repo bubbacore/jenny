@@ -150,7 +150,7 @@
     }
   ],
   "title": "Leitura",
-  "description": "A programação completa de um cinema na janela, lida da fonte principal. Além do schema, a ingestão recusa: chaves de filme repetidas, sessões que citam um filme fora da leitura, sessões repetidas (mesmo filme do TMDB, início, sala, idioma e formato), marcadores de sala repetidos, ingressos na fonte repetidos na mesma sessão, datas inexistentes, um período do post com o último dia antes do primeiro e o título ou o ano do primeiro resultado da busca num filme cuja busca não trouxe resultado. Recusa também uma leitura ok do site oficial sem o post nem no_new_post, ou com os dois, um post ou no_new_post numa leitura de outra fonte e uma leitura sem post novo com filmes ou sessões.",
+  "description": "A programação completa de um cinema na janela, lida da fonte principal. Além do schema, a ingestão recusa: chaves de filme repetidas, sessões que citam um filme fora da leitura, sessões repetidas (mesmo filme do TMDB, início, sala, idioma e formato, com a sessão sem formato contada como 2D), marcadores de sala repetidos, ingressos na fonte repetidos na mesma sessão, datas inexistentes, um período do post com o último dia antes do primeiro e o título ou o ano do primeiro resultado da busca num filme cuja busca não trouxe resultado. Recusa também uma leitura ok do site oficial sem o post nem no_new_post, ou com os dois, um post ou no_new_post numa leitura de outra fonte e uma leitura sem post novo com filmes ou sessões.",
   "$defs": {
     "Movie": {
       "type": "object",
@@ -521,6 +521,7 @@
           ]
         },
         "format": {
+          "description": "O formato, só quando a fonte o informa. Sem ele, a sessão é 2D, a sessão comum.",
           "type": "string",
           "enum": [
             "2d",

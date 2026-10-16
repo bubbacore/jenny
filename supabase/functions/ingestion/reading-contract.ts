@@ -157,7 +157,9 @@ const Session = z.strictObject({
   starts_at: localDateTime.describe("O início, no horário local da cidade, como 2026-09-24T17:00."),
   room: nonBlank.optional(),
   audio: z.enum(["dubbed", "subtitled", "original"]).optional(),
-  format: z.enum(["2d", "3d", "imax"]).optional(),
+  format: z.enum(["2d", "3d", "imax"]).optional().describe(
+    "O formato, só quando a fonte o informa. Sem ele, a sessão é 2D, a sessão comum.",
+  ),
   tags: z.array(nonBlank).describe("Os marcadores de sala, como VIP, XD ou D-BOX."),
   external_id: nonBlank.optional().describe("O identificador da sessão na fonte."),
   prices: z.array(Price).describe("Vazio quando o preço de bilheteria não pôde ser determinado."),
@@ -207,7 +209,8 @@ export const Reading = z.discriminatedUnion("status", [
   title: "Leitura",
   description: "A programação completa de um cinema na janela, lida da fonte principal. " +
     "Além do schema, a ingestão recusa: chaves de filme repetidas, sessões que citam um filme " +
-    "fora da leitura, sessões repetidas (mesmo filme do TMDB, início, sala, idioma e formato), " +
+    "fora da leitura, sessões repetidas (mesmo filme do TMDB, início, sala, idioma e formato, " +
+    "com a sessão sem formato contada como 2D), " +
     "marcadores de sala repetidos, ingressos na fonte repetidos na mesma sessão, datas inexistentes, " +
     "um período do post com o último dia antes do primeiro e o título ou o ano do primeiro " +
     "resultado da busca num filme cuja busca não trouxe resultado. " +
@@ -266,7 +269,7 @@ function checkReferences(reading: ReadingShape, context: z.RefinementCtx) {
         session.starts_at,
         session.room ?? null,
         session.audio ?? null,
-        session.format ?? null,
+        session.format ?? "2d",
       ]);
       if (sessions.has(identity)) {
         context.addIssue({
