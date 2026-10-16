@@ -1,6 +1,6 @@
 begin;
 
-select plan(7);
+select plan(8);
 
 -- Dias da janela
 
@@ -214,6 +214,17 @@ select is(
   ),
   4,
   'e o histórico guarda essa contagem como as sessões da leitura anterior'
+);
+
+-- Formato da sessão
+
+-- The sessions recorded without a format became 2D, and none is recorded
+-- without one from then on.
+select col_not_null(
+  'public',
+  'sessions',
+  'format',
+  'toda sessão tem formato, e a sessão sem formato informado pela fonte é 2D'
 );
 
 select * from finish();

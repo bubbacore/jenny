@@ -149,6 +149,24 @@ Deno.test("uma leitura sem post novo reaproveita a programação do último post
   });
 });
 
+Deno.test("uma leitura sem post novo reaproveita como 2D as sessões do post sem formato", async () => {
+  const day = newWeek();
+  const [, tuesday, , thursday] = window(day);
+  const weeklyPost = post(at(addDays(day, -5), "10:00"));
+
+  await readPost(weeklyPost, [movie("a", 9400201)], [
+    session("a", `${thursday}T18:00`, { format: undefined }),
+    session("a", `${thursday}T20:00`, { format: "3d" }),
+  ], at(day, "08:00"));
+
+  const { body } = await readWithoutNewPost(at(tuesday, "08:00"));
+  assertEquals(body.result, "success", JSON.stringify(body));
+  assertEquals((await showtimes(CINEMA)).map((row) => [row.starts_at, row.format]), [
+    [`${thursday}T18:00:00`, "2d"],
+    [`${thursday}T20:00:00`, "3d"],
+  ]);
+});
+
 // A weekly post from Thursday to Tuesday, read on its Thursday, with the
 // sessions on the given days of the period, counted from the Thursday.
 async function readWeeklyPost(tmdbId: number, sessionDays: number[]) {

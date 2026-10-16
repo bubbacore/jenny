@@ -174,6 +174,10 @@ Deno.test("uma sessão é única por cinema, filme, início, sala, idioma e form
         session("a", "2026-10-05T19:00", { room: undefined, audio: undefined, format: undefined }),
       ],
     ],
+    [
+      [movie("a", 9100006)],
+      [session("a", "2026-10-05T19:00", { format: undefined }), session("a", "2026-10-05T19:00")],
+    ],
   ];
   for (const [movies, sessions] of repeated) {
     const { status, body } = await record(
@@ -194,6 +198,27 @@ Deno.test("uma sessão é única por cinema, filme, início, sala, idioma e form
   assertEquals(distinct.status, 200);
   assertEquals(distinct.body.sessions.accepted, 5);
   assertEquals((await showtimes("cinemark-shopping-jardins")).length, 5);
+});
+
+Deno.test("uma sessão sem formato informado pela fonte é 2D, a sessão comum", async () => {
+  const { status, body } = await read("cinemark-shopping-jardins", "ingresso_com", [
+    movie("a", 9100007),
+  ], [
+    session("a", "2026-10-05T19:00", { format: undefined }),
+    session("a", "2026-10-05T21:00", { format: "3d" }),
+    session("a", "2026-10-05T23:00", { format: "imax" }),
+  ]);
+
+  assertEquals(status, 200, JSON.stringify(body));
+  assertEquals(body.sessions.accepted, 3);
+  assertEquals(
+    (await showtimes("cinemark-shopping-jardins")).map((row) => [row.starts_at, row.format]),
+    [
+      ["2026-10-05T19:00:00", "2d"],
+      ["2026-10-05T21:00:00", "3d"],
+      ["2026-10-05T23:00:00", "imax"],
+    ],
+  );
 });
 
 Deno.test("um filme novo entra com o identificador do TMDB, os títulos do TMDB e um endereço próprio", async () => {
