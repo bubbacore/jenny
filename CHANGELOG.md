@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.17.0](https://github.com/bubbacore/jenny/compare/v0.16.1...v0.17.0) (2026-10-16)
+
+
+### ⚠ BREAKING CHANGES
+
+* **db:** a failed reading by error, incomplete reading or retained reading no longer erases the cinema's showtimes nor shows the cinema as updating.
+
+### Features
+
+* **db:** keep the showtimes after a failed reading ([22cc403](https://github.com/bubbacore/jenny/commit/22cc40306e088e82c484c30f97555ff334e10361))
+
 ## [0.16.1](https://github.com/bubbacore/jenny/compare/v0.16.0...v0.16.1) (2026-10-09)
 
 
