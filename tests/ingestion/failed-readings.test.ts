@@ -19,15 +19,21 @@ import {
 
 const error = { status: "error", reason: "A fonte não respondeu." };
 
-Deno.test("uma leitura com erro ou incompleta apaga a programação, e todos os dias do cinema ficam atualizando", async () => {
+Deno.test("uma leitura com erro ou incompleta mantém a programação da última leitura com sucesso, sem misturar a leitura incompleta", async () => {
   const day = newWeek();
-  const [, tuesday] = window(day);
+  const [, tuesday, wednesday] = window(day);
   const movies = [movie("a", 9700001)];
   const sessions = [session("a", `${day}T19:00`), session("a", `${tuesday}T19:00`)];
+  const startTimes = async () =>
+    (await showtimes("cinemark-riomar")).map((row) => row.starts_at as string);
 
   const before = await read("cinemark-riomar", "ingresso_com", movies, sessions, at(day, "08:00"));
   assertEquals(before.body.result, "success");
-  assertEquals((await showtimes("cinemark-riomar")).length, 2);
+  const kept = await startTimes();
+  assertEquals(kept.length, 2);
+  const keptDays = window(day).map((
+    date,
+  ) => [date, date === day || date === tuesday ? "with_sessions" : "not_announced"]);
 
   const failed = await read("cinemark-riomar", "ingresso_com", [], [], at(day, "10:00"), error);
   assertEquals(failed.status, 200);
@@ -35,11 +41,8 @@ Deno.test("uma leitura com erro ou incompleta apaga a programação, e todos os 
   assertEquals(failed.body.failure_type, "error");
   assertEquals(failed.body.reason, "A fonte não respondeu.");
   assertEquals(failed.body.sessions, { received: 0, discarded: 0, accepted: 0, retained: 0 });
-  assertEquals(await showtimes("cinemark-riomar"), []);
-  assertEquals(
-    await cinemaDays("cinemark-riomar", at(day, "10:00")),
-    window(day).map((date) => [date, "updating"]),
-  );
+  assertEquals(await startTimes(), kept);
+  assertEquals(await cinemaDays("cinemark-riomar", at(day, "10:00")), keptDays);
 
   const [history] = await readView(
     "readings",
@@ -51,37 +54,76 @@ Deno.test("uma leitura com erro ou incompleta apaga a programação, e todos os 
     reason: "A fonte não respondeu.",
   });
 
-  const back = await read("cinemark-riomar", "ingresso_com", movies, sessions, at(day, "12:00"));
-  assertEquals(back.body.result, "success");
-  assertEquals(back.body.failure_type, undefined);
-  assertEquals((await showtimes("cinemark-riomar")).length, 2);
-
   const incomplete = await read(
     "cinemark-riomar",
     "ingresso_com",
     movies,
-    sessions,
+    [session("a", `${wednesday}T21:00`)],
     at(day, "14:00"),
     { status: "incomplete", reason: "A página de terça não respondeu." },
   );
   assertEquals(incomplete.body.result, "failure");
   assertEquals(incomplete.body.failure_type, "incomplete");
-  assertEquals(incomplete.body.sessions, { received: 2, discarded: 0, accepted: 0, retained: 0 });
-  assertEquals(await showtimes("cinemark-riomar"), []);
+  assertEquals(incomplete.body.sessions, { received: 1, discarded: 0, accepted: 0, retained: 0 });
+  assertEquals(await startTimes(), kept);
+  assertEquals(await cinemaDays("cinemark-riomar", at(day, "14:00")), keptDays);
+
+  // On the next day the kept showtimes no longer cover Monday, and the
+  // days they do not cover are not announced.
+  const nextDay = await read(
+    "cinemark-riomar",
+    "ingresso_com",
+    [],
+    [],
+    at(tuesday, "08:00"),
+    error,
+  );
+  assertEquals(nextDay.body.result, "failure");
+  assertEquals(await startTimes(), kept);
   assertEquals(
-    await cinemaDays("cinemark-riomar", at(day, "14:00")),
+    await cinemaDays("cinemark-riomar", at(tuesday, "08:00")),
+    window(tuesday).map((date) => [date, date === tuesday ? "with_sessions" : "not_announced"]),
+  );
+
+  const back = await read("cinemark-riomar", "ingresso_com", movies, [
+    session("a", `${wednesday}T21:00`),
+  ], at(tuesday, "12:00"));
+  assertEquals(back.body.result, "success");
+  assertEquals(back.body.failure_type, undefined);
+  assertEquals((await showtimes("cinemark-riomar")).map((row) => row.date), [wednesday]);
+});
+
+Deno.test("um cinema sem nenhuma leitura com sucesso, com uma leitura com falha, fica atualizando", async () => {
+  // A date before every reading the other tests record, so the cinema has no
+  // successful reading before this one. Each run adds only failures to it.
+  const day = "2025-06-02";
+
+  const { status, body } = await read(
+    "cinemark-shopping-jardins",
+    "ingresso_com",
+    [],
+    [],
+    at(day, "08:00"),
+    error,
+  );
+  assertEquals(status, 200, JSON.stringify(body));
+  assertEquals(body.result, "failure");
+  assertEquals(
+    await cinemaDays("cinemark-shopping-jardins", at(day, "08:00")),
     window(day).map((date) => [date, "updating"]),
   );
 });
 
-Deno.test("uma leitura sem nenhuma sessão de hoje em diante, com algum dia de funcionamento na janela, é leitura desatualizada", async () => {
+Deno.test("uma leitura sem nenhuma sessão de hoje em diante, com algum dia de funcionamento na janela, é leitura desatualizada e apaga a programação", async () => {
   const day = newWeek();
   const sunday = addDays(day, -1);
+  const tuesday = addDays(day, 1);
   const movies = [movie("a", 9700002)];
 
   await read("centerplex-parque-shopping", "veloxtickets", movies, [
     session("a", `${day}T19:00`),
   ], at(day, "08:00"));
+  assertEquals((await showtimes("centerplex-parque-shopping")).length, 1);
 
   for (
     const [time, sessions] of [
@@ -104,6 +146,17 @@ Deno.test("uma leitura sem nenhuma sessão de hoje em diante, com algum dia de f
       "A leitura não trouxe nenhuma sessão de hoje em diante, e o cinema funciona em algum dia da janela.",
     );
     assertEquals(body.sessions.accepted, 0, time);
+    assertEquals(
+      body.alerts.map((alert: any) => alert.text),
+      time === "10:00"
+        ? [
+          "Centerplex Parque Shopping: leitura com falha (leitura desatualizada). Motivo: A leitura " +
+          "não trouxe nenhuma sessão de hoje em diante, e o cinema funciona em algum dia da janela. " +
+          'A programação do cinema foi apagada, e o site mostra "atualizando".',
+        ]
+        : [],
+      time,
+    );
     assertEquals(await showtimes("centerplex-parque-shopping"), [], time);
     assertEquals(
       await cinemaDays("centerplex-parque-shopping", at(day, time)),
@@ -111,6 +164,26 @@ Deno.test("uma leitura sem nenhuma sessão de hoje em diante, com algum dia de f
       time,
     );
   }
+
+  // An error after the outdated reading keeps the cinema without showtimes,
+  // and the first failure of the next day says so.
+  const { body } = await read(
+    "centerplex-parque-shopping",
+    "veloxtickets",
+    [],
+    [],
+    at(tuesday, "06:00"),
+    error,
+  );
+  assertEquals(body.alerts.map((alert: any) => alert.text), [
+    "Centerplex Parque Shopping: leitura com falha (erro). Motivo: A fonte não respondeu. " +
+    'O cinema continua sem programação, e o site mostra "atualizando".',
+  ]);
+  assertEquals(await showtimes("centerplex-parque-shopping"), []);
+  assertEquals(
+    await cinemaDays("centerplex-parque-shopping", at(tuesday, "06:00")),
+    window(tuesday).map((date) => [date, "updating"]),
+  );
 });
 
 Deno.test("cada dia da janela tem um só estado: com sessões, dia sem funcionamento, dia sem sessões ou dia não divulgado", async () => {
@@ -133,7 +206,7 @@ Deno.test("cada dia da janela tem um só estado: com sessões, dia sem funcionam
   );
   assertEquals(body.result, "success");
 
-  assertEquals(await cinemaDays("cinema-do-centro", at(day, "08:00")), [
+  const states = [
     [day, "with_sessions"],
     [tuesday, "with_sessions"],
     [wednesday, "closed"],
@@ -141,7 +214,14 @@ Deno.test("cada dia da janela tem um só estado: com sessões, dia sem funcionam
     [friday, "no_sessions"],
     [saturday, "not_announced"],
     [sunday, "not_announced"],
-  ]);
+  ];
+  assertEquals(await cinemaDays("cinema-do-centro", at(day, "08:00")), states);
+
+  // A failed reading keeps the showtimes of the post, and with them the
+  // states of the days.
+  const failed = await read("cinema-do-centro", "official_site", [], [], at(day, "10:00"), error);
+  assertEquals(failed.body.result, "failure");
+  assertEquals(await cinemaDays("cinema-do-centro", at(day, "10:00")), states);
 });
 
 Deno.test("numa fonte sem post, um dia sem sessões em que o cinema funciona é dia não divulgado", async () => {
@@ -276,7 +356,7 @@ Deno.test("a primeira falha do dia abre collection-failure, e o sucesso seguinte
     subject,
     effect: "open",
     text:
-      `Cine Alquimia: leitura com falha (${failure}). Motivo: ${reason}. A programação do cinema foi apagada, e o site mostra "atualizando".`,
+      `Cine Alquimia: leitura com falha (${failure}). Motivo: ${reason}. O site continua com a programação da última leitura com sucesso.`,
   }];
 
   await read("cine-alquimia", "ingresso_com", movies, sessions, at(day, "07:00"));
