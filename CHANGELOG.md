@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.18.0](https://github.com/bubbacore/jenny/compare/v0.17.0...v0.18.0) (2026-10-16)
+
+
+### ⚠ BREAKING CHANGES
+
+* **db:** a reading with a session without a format and a 2D session with the same TMDB movie, start, room and audio is now refused as a repeated session, and sessions.format is not null.
+
+### Features
+
+* **db:** record sessions without a format as 2D ([9ad3033](https://github.com/bubbacore/jenny/commit/9ad3033e0987928602f1e300293e8321497f7ada))
+
 ## [0.17.0](https://github.com/bubbacore/jenny/compare/v0.16.1...v0.17.0) (2026-10-16)
 
 
