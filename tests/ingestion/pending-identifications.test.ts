@@ -268,7 +268,7 @@ Deno.test("uma identificação resolvida não alerta nos dias seguintes", async 
   assertEquals(alertsOf("pending-identification", nextDay.body.alerts), []);
 });
 
-Deno.test("uma leitura com todas as sessões retidas é leitura retida e apaga a programação do cinema", async () => {
+Deno.test("uma leitura com todas as sessões retidas é leitura retida e mantém a programação da última leitura com sucesso", async () => {
   const day = newWeek();
   const title = `Pré-estreia: Avatar ${run}`;
 
@@ -299,13 +299,13 @@ Deno.test("uma leitura com todas as sessões retidas é leitura retida e apaga a
   assertEquals(
     body.alerts[0].text,
     "Cinesercla Prêmio: leitura com falha (leitura retida). Motivo: Todas as sessões da leitura " +
-      "ficaram retidas por identificação pendente (2 sessões). A programação do cinema foi " +
-      'apagada, e o site mostra "atualizando".',
+      "ficaram retidas por identificação pendente (2 sessões). O site continua com a programação " +
+      "da última leitura com sucesso.",
   );
-  assertEquals(await showtimes("cinesercla-premio"), []);
+  assertEquals((await showtimes("cinesercla-premio")).map((row) => row.movie), ["movie-9800031"]);
   assertEquals(
     await cinemaDays("cinesercla-premio", at(day, "10:00")),
-    window(day).map((date) => [date, "updating"]),
+    window(day).map((date) => [date, date === day ? "with_sessions" : "not_announced"]),
   );
   const [history] = await readView(
     "readings",
