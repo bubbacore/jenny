@@ -1,12 +1,55 @@
 // deno-lint-ignore-file no-explicit-any
 import { assertEquals } from "@std/assert";
 import { callIngestion, readView } from "./local.ts";
-import { at, movie, newTmdbId, newWeek, read, session } from "./reading.ts";
+import {
+  addDays,
+  at,
+  collect,
+  finish,
+  movie,
+  newTmdbId,
+  newWeek,
+  read,
+  session,
+} from "./reading.ts";
 
 const UPDATED_AT = "2026-10-12T07:00:00-03:00";
 
-function updateRatings(movies: unknown[], clock = UPDATED_AT) {
-  return callIngestion("update-ratings", { movies }, { clock });
+// The movie whose only sessions are in the inactive cinema, from the seed.
+const INACTIVE_CINEMA_MOVIE = 9990001;
+
+const moviePage = (id: number) => ({
+  url: `https://www.rottentomatoes.com/m/movie_${id}`,
+  kind: "movie_page",
+});
+const search = (id: number) => ({
+  url: `https://www.rottentomatoes.com/search?search=Movie%20${id}`,
+  kind: "search",
+});
+
+// Without a collection, as the weekly routine still calls it.
+function updateRatings(movies: unknown[], clock = UPDATED_AT, collectionId?: string) {
+  return callIngestion("update-ratings", {
+    ...(collectionId ? { collection_id: collectionId } : {}),
+    movies,
+  }, { clock });
+}
+
+function ratingsPlan(collectionId: string, clock: string) {
+  return callIngestion("ratings-plan", { collection_id: collectionId }, { clock });
+}
+
+// A movie with an IMDb id, the original title and the year, as TMDB gives
+// them.
+function ratedMovie(key: string, tmdbId: number) {
+  return movie(key, tmdbId, {
+    tmdb: {
+      title: `Filme ${tmdbId}`,
+      original_title: `Movie ${tmdbId}`,
+      imdb_id: `tt${tmdbId}`,
+      year: 2026,
+    },
+  });
 }
 
 // Puts a new movie in the catalog, with an accepted session, and returns its
@@ -29,10 +72,18 @@ async function ratings(tmdbId: number) {
   return row;
 }
 
+async function rottenTomatoesLink(tmdbId: number) {
+  const [row] = await readView(
+    "movies",
+    `tmdb_id=eq.${tmdbId}&select=rotten_tomatoes_url,rotten_tomatoes_url_kind`,
+  );
+  return row;
+}
+
 async function siteRatings(tmdbId: number) {
   const [row] = await readView(
     "site_movies",
-    `tmdb_id=eq.${tmdbId}&select=imdb_rating,imdb_votes,tomatometer`,
+    `tmdb_id=eq.${tmdbId}&select=imdb_rating,imdb_votes,tomatometer,rotten_tomatoes_url`,
   );
   return row;
 }
@@ -59,6 +110,7 @@ Deno.test("as notas de um filme são atualizadas com a origem e a data, e chegam
     imdb_rating: 7.3,
     imdb_votes: 152340,
     tomatometer: 88,
+    rotten_tomatoes_url: null,
   });
 });
 
@@ -130,4 +182,256 @@ Deno.test("a atualização de notas recusa o que foge do contrato, citando o cam
     path: "/movies/1/tmdb_id",
     message: "Filme repetido.",
   }]);
+});
+
+Deno.test("a atualização sem coleta mantém o link do Rotten Tomatoes guardado quando não o envia", async () => {
+  const tmdbId = await newMovie();
+  await updateRatings([{
+    tmdb_id: tmdbId,
+    imdb: null,
+    tomatometer: { score: 70, source: "rotten_tomatoes_site" },
+    rotten_tomatoes_link: moviePage(tmdbId),
+  }]);
+
+  const { status, body } = await updateRatings([{
+    tmdb_id: tmdbId,
+    imdb: null,
+    tomatometer: { score: 71, source: "rotten_tomatoes_site" },
+  }], "2026-10-19T07:00:00-03:00");
+
+  assertEquals(status, 200, JSON.stringify(body));
+  assertEquals(await rottenTomatoesLink(tmdbId), {
+    rotten_tomatoes_url: moviePage(tmdbId).url,
+    rotten_tomatoes_url_kind: "movie_page",
+  });
+});
+
+Deno.test("o plano das notas devolve os filmes com sessões sem notas de hoje, no fuso da cidade, com o link guardado", async () => {
+  const today = newWeek();
+  const yesterday = addDays(today, -1);
+  const [never, updatedYesterday, lateYesterday, updatedToday, withoutImdb] = [
+    newTmdbId(),
+    newTmdbId(),
+    newTmdbId(),
+    newTmdbId(),
+    newTmdbId(),
+  ];
+  const movies = [
+    ratedMovie("a", never),
+    ratedMovie("b", updatedYesterday),
+    ratedMovie("c", lateYesterday),
+    ratedMovie("d", updatedToday),
+    movie("e", withoutImdb),
+  ];
+  const response = await read(
+    "cine-alquimia",
+    "ingresso_com",
+    movies,
+    movies.map((entry, index) => session(entry.key, `${today}T${14 + index}:00`)),
+    at(yesterday, "08:00"),
+  );
+  assertEquals(response.body.result, "success", JSON.stringify(response.body));
+
+  const rated = (tmdbId: number, link: unknown = null) => ({
+    tmdb_id: tmdbId,
+    imdb: { rating: 7, votes: 100 },
+    tomatometer: null,
+    rotten_tomatoes_link: link,
+  });
+  await updateRatings(
+    [rated(updatedYesterday, moviePage(updatedYesterday))],
+    at(yesterday, "10:00"),
+  );
+  // 23:30 in Aracaju is already the next day in UTC.
+  await updateRatings([rated(lateYesterday, search(lateYesterday))], at(yesterday, "23:30"));
+  await updateRatings([rated(updatedToday)], at(today, "00:30"));
+
+  const collection = await collect("manual", at(today, "07:00"));
+  const { status, body } = await ratingsPlan(collection, at(today, "07:00"));
+
+  assertEquals(status, 200, JSON.stringify(body));
+  const ours = [never, updatedYesterday, lateYesterday, updatedToday, withoutImdb];
+  assertEquals(body.movies.filter((planned: any) => ours.includes(planned.tmdb_id)), [
+    {
+      tmdb_id: never,
+      imdb_id: `tt${never}`,
+      original_title: `Movie ${never}`,
+      year: 2026,
+      rotten_tomatoes_link: null,
+    },
+    {
+      tmdb_id: updatedYesterday,
+      imdb_id: `tt${updatedYesterday}`,
+      original_title: `Movie ${updatedYesterday}`,
+      year: 2026,
+      rotten_tomatoes_link: moviePage(updatedYesterday),
+    },
+    {
+      tmdb_id: lateYesterday,
+      imdb_id: `tt${lateYesterday}`,
+      original_title: `Movie ${lateYesterday}`,
+      year: 2026,
+      rotten_tomatoes_link: search(lateYesterday),
+    },
+  ]);
+});
+
+Deno.test("o plano das notas deixa de fora o filme só com sessões em cinema inativo", async () => {
+  assertEquals(await readView("movies", `tmdb_id=eq.${INACTIVE_CINEMA_MOVIE}&select=imdb_id`), [
+    { imdb_id: `tt${INACTIVE_CINEMA_MOVIE}` },
+  ]);
+  const clock = at(newWeek(), "07:00");
+  const collection = await collect("manual", clock);
+
+  const { status, body } = await ratingsPlan(collection, clock);
+
+  assertEquals(status, 200, JSON.stringify(body));
+  assertEquals(
+    body.movies.some((planned: any) => planned.tmdb_id === INACTIVE_CINEMA_MOVIE),
+    false,
+  );
+});
+
+Deno.test("o plano e a atualização de notas recusam uma coleta desconhecida ou já terminada", async () => {
+  const tmdbId = await newMovie();
+  const clock = at(newWeek(), "07:00");
+  const finished = await collect("manual", clock, { site_publication: false });
+  await finish(finished, clock);
+  const update = (collectionId: string) =>
+    updateRatings(
+      [{ tmdb_id: tmdbId, imdb: null, tomatometer: null, rotten_tomatoes_link: null }],
+      clock,
+      collectionId,
+    );
+
+  for (
+    const response of [
+      await ratingsPlan(crypto.randomUUID(), clock),
+      await update(crypto.randomUUID()),
+    ]
+  ) {
+    assertEquals(response.status, 400);
+    assertEquals(response.body.error.code, "unknown_collection");
+    assertEquals(response.body.error.issues.map((issue: any) => issue.path), ["/collection_id"]);
+  }
+  for (const response of [await ratingsPlan(finished, clock), await update(finished)]) {
+    assertEquals(response.status, 409);
+    assertEquals(response.body.error.code, "collection_finished");
+  }
+  assertEquals((await ratings(tmdbId)).ratings_updated_at, null);
+
+  const invalid = await callIngestion("ratings-plan", { collection_id: "coleta" }, { clock });
+  assertEquals(invalid.status, 400);
+  assertEquals(invalid.body.error.issues.map((issue: any) => issue.path), ["/collection_id"]);
+});
+
+Deno.test("a atualização de notas da coleta grava o link do Rotten Tomatoes, e uma nota ou um link ausentes apagam os guardados", async () => {
+  const tmdbId = await newMovie();
+  const clock = at(newWeek(), "07:00");
+  const collection = await collect("manual", clock);
+
+  const first = await updateRatings(
+    [{
+      tmdb_id: tmdbId,
+      imdb: { rating: 8.1, votes: 5000 },
+      tomatometer: { score: 93, source: "rotten_tomatoes_site" },
+      rotten_tomatoes_link: moviePage(tmdbId),
+    }],
+    clock,
+    collection,
+  );
+
+  assertEquals(first.status, 200, JSON.stringify(first.body));
+  assertEquals(first.body, { updated_movies: 1 });
+  assertEquals(await rottenTomatoesLink(tmdbId), {
+    rotten_tomatoes_url: moviePage(tmdbId).url,
+    rotten_tomatoes_url_kind: "movie_page",
+  });
+  assertEquals(await siteRatings(tmdbId), {
+    imdb_rating: 8.1,
+    imdb_votes: 5000,
+    tomatometer: 93,
+    rotten_tomatoes_url: moviePage(tmdbId).url,
+  });
+
+  await updateRatings(
+    [{
+      tmdb_id: tmdbId,
+      imdb: null,
+      tomatometer: { score: 90, source: "omdb" },
+      rotten_tomatoes_link: search(tmdbId),
+    }],
+    clock,
+    collection,
+  );
+  assertEquals(await rottenTomatoesLink(tmdbId), {
+    rotten_tomatoes_url: search(tmdbId).url,
+    rotten_tomatoes_url_kind: "search",
+  });
+
+  await updateRatings(
+    [{ tmdb_id: tmdbId, imdb: null, tomatometer: null, rotten_tomatoes_link: null }],
+    clock,
+    collection,
+  );
+  assertEquals(await siteRatings(tmdbId), {
+    imdb_rating: null,
+    imdb_votes: null,
+    tomatometer: null,
+    rotten_tomatoes_url: null,
+  });
+  assertEquals(await rottenTomatoesLink(tmdbId), {
+    rotten_tomatoes_url: null,
+    rotten_tomatoes_url_kind: null,
+  });
+});
+
+Deno.test("a atualização de notas da coleta exige o link e recusa um link fora do site do Rotten Tomatoes, citando o caminho", async () => {
+  const tmdbId = await newMovie();
+  const clock = at(newWeek(), "07:00");
+  const collection = await collect("manual", clock);
+  const links = [
+    { url: `https://www.imdb.com/title/tt${tmdbId}/`, kind: "movie_page" },
+    { url: "http://www.rottentomatoes.com/m/movie", kind: "movie_page" },
+    { url: "https://rottentomatoes.com.example.com/m/movie", kind: "movie_page" },
+    { url: "não é um link", kind: "movie_page" },
+    { url: "https://www.rottentomatoes.com/search?search=Movie", kind: "movie_page" },
+    { url: "https://www.rottentomatoes.com/m/movie", kind: "search" },
+    { url: "https://www.rottentomatoes.com/m/movie", kind: "page" },
+  ];
+
+  const wrong = await updateRatings(
+    links.map((link) => ({
+      tmdb_id: newTmdbId(),
+      imdb: null,
+      tomatometer: null,
+      rotten_tomatoes_link: link,
+    })),
+    clock,
+    collection,
+  );
+
+  assertEquals(wrong.status, 400, JSON.stringify(wrong.body));
+  assertEquals(wrong.body.error.code, "invalid_request");
+  assertEquals(wrong.body.error.issues.map((issue: any) => issue.path), [
+    "/movies/0/rotten_tomatoes_link/url",
+    "/movies/1/rotten_tomatoes_link/url",
+    "/movies/2/rotten_tomatoes_link/url",
+    "/movies/3/rotten_tomatoes_link/url",
+    "/movies/4/rotten_tomatoes_link/url",
+    "/movies/5/rotten_tomatoes_link/url",
+    "/movies/6/rotten_tomatoes_link/kind",
+  ]);
+
+  const missing = await updateRatings(
+    [{ tmdb_id: tmdbId, imdb: null, tomatometer: null }],
+    clock,
+    collection,
+  );
+  assertEquals(missing.status, 400);
+  assertEquals(missing.body.error.issues, [{
+    path: "/movies/0/rotten_tomatoes_link",
+    message: "Envie o link do Rotten Tomatoes, ou null sem ele.",
+  }]);
+  assertEquals((await ratings(tmdbId)).ratings_updated_at, null);
 });

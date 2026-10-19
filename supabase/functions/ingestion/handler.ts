@@ -6,6 +6,7 @@ import { collectionSummary } from "./collection-summary.ts";
 import { dailyCollectionStatus } from "./daily-collection-status.ts";
 import { finishCollection } from "./finish-collection.ts";
 import { failure } from "./http.ts";
+import { ratingsPlan, updateRatings } from "./ratings.ts";
 import { recollectionCinemas } from "./recollection-cinemas.ts";
 import { recordImage } from "./record-image.ts";
 import { recordReading } from "./record-reading.ts";
@@ -14,7 +15,6 @@ import { resolvePendingIdentification } from "./resolve-pending-identification.t
 import { resolvePendingTicketType } from "./resolve-pending-ticket-type.ts";
 import { recordSitePublication, recordSiteReversion } from "./site-publication.ts";
 import { startReading } from "./start-reading.ts";
-import { updateRatings } from "./update-ratings.ts";
 import { updateSourceReliability } from "./update-source-reliability.ts";
 
 export type Context = { database: SupabaseClient; now: Date };
@@ -38,6 +38,7 @@ const operations: Record<string, { caller: Caller; run: Operation }> = {
   "record-site-reversion": { caller: "hermes", run: recordSiteReversion },
   "record-site-publication": { caller: "hermes", run: recordSitePublication },
   "update-source-reliability": { caller: "hermes", run: updateSourceReliability },
+  "ratings-plan": { caller: "hermes", run: ratingsPlan },
   "update-ratings": { caller: "hermes", run: updateRatings },
   "update-cinema": { caller: "hermes", run: updateCinema },
   "decide-proposal": { caller: "hermes", run: decideProposal },

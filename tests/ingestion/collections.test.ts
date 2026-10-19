@@ -1,7 +1,18 @@
 // deno-lint-ignore-file no-explicit-any
 import { assertEquals } from "@std/assert";
 import { callIngestion, readView, watchmanToken } from "./local.ts";
-import { addDays, at, collect, finish, movie, newWeek, read, session, start } from "./reading.ts";
+import {
+  addDays,
+  at,
+  collect,
+  finish,
+  movie,
+  newTmdbId,
+  newWeek,
+  read,
+  session,
+  start,
+} from "./reading.ts";
 
 const error = { status: "error", reason: "A fonte não respondeu." };
 
@@ -145,6 +156,67 @@ Deno.test("o fim de uma recoleta publica quando alguma leitura libera sessões r
     nothingNew,
   );
   assertEquals((await finish(nothingNew, at(day, "08:10"))).body.site_publication, false);
+});
+
+Deno.test("o fim de uma recoleta publica quando a atualização de notas dela muda alguma nota ou link", async () => {
+  const day = newWeek();
+  const tmdbId = newTmdbId();
+  const movies = [movie("a", tmdbId)];
+  const sessions = [session("a", `${day}T19:00`)];
+  const ratings = (votes: number, link: unknown = null) => [{
+    tmdb_id: tmdbId,
+    imdb: { rating: 7.1, votes },
+    tomatometer: { score: 80, source: "omdb" },
+    rotten_tomatoes_link: link,
+  }];
+  const updateRatings = (movieRatings: unknown[], clock: string, collectionId?: string) =>
+    callIngestion("update-ratings", {
+      ...(collectionId ? { collection_id: collectionId } : {}),
+      movies: movieRatings,
+    }, { clock });
+  // A recollection of the cinema, whose reading keeps the same result.
+  const recollect = async (time: string) => {
+    const collection = await collect("recollection", at(day, time), {
+      cinemas: ["cinemark-riomar"],
+    });
+    await read("cinemark-riomar", "ingresso_com", movies, sessions, at(day, time), {}, collection);
+    return collection;
+  };
+  await recordSitePublication(at(day, "05:00"));
+
+  const daily = await collect("daily", at(day, "06:00"));
+  await read("cinemark-riomar", "ingresso_com", movies, sessions, at(day, "06:01"), {}, daily);
+  assertEquals((await updateRatings(ratings(1000), at(day, "06:20"), daily)).status, 200);
+  await finish(daily, at(day, "06:30"));
+
+  // An update without a collection, as the weekly routine still sends it,
+  // affects no publication, even with a recollection open.
+  const unchanged = await recollect("08:00");
+  await updateRatings(ratings(1200), at(day, "08:05"));
+  assertEquals((await updateRatings(ratings(1200), at(day, "08:06"), unchanged)).status, 200);
+  assertEquals((await finish(unchanged, at(day, "08:10"))).body.site_publication, false);
+
+  const newVotes = await recollect("09:00");
+  await updateRatings(ratings(1300), at(day, "09:05"), newVotes);
+  assertEquals((await finish(newVotes, at(day, "09:10"))).body.site_publication, true);
+
+  const link = {
+    url: `https://www.rottentomatoes.com/m/movie_${tmdbId}`,
+    kind: "movie_page",
+  };
+  const newLink = await recollect("10:00");
+  await updateRatings(ratings(1300, link), at(day, "10:05"), newLink);
+  assertEquals((await finish(newLink, at(day, "10:10"))).body.site_publication, true);
+
+  await recordSiteReversion(at(day, "11:00"));
+  const suspended = await recollect("12:00");
+  await updateRatings(ratings(1400, link), at(day, "12:05"), suspended);
+  assertEquals((await finish(suspended, at(day, "12:10"))).body, {
+    collection_id: suspended,
+    site_publication: false,
+    automatic_publication_suspended: true,
+  });
+  await recordSitePublication(at(day, "13:00"));
 });
 
 Deno.test("uma coleta avulsa publica por padrão e não publica quando pedida assim", async () => {
