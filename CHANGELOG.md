@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.19.0](https://github.com/bubbacore/jenny/compare/v0.18.0...v0.19.0) (2026-10-19)
+
+
+### Features
+
+* **ingestion:** update the ratings in every collection ([12387f9](https://github.com/bubbacore/jenny/commit/12387f9387de3579d6eec50f4da03420a2eacdff))
+
 ## [0.18.0](https://github.com/bubbacore/jenny/compare/v0.17.0...v0.18.0) (2026-10-16)
 
 
