@@ -158,15 +158,15 @@ Deno.test("o fim de uma recoleta publica quando alguma leitura libera sessões r
   assertEquals((await finish(nothingNew, at(day, "08:10"))).body.site_publication, false);
 });
 
-Deno.test("o fim de uma recoleta publica quando a atualização de notas dela muda alguma nota ou link", async () => {
+Deno.test("o fim de uma recoleta publica quando a atualização de notas dela muda alguma nota, o Certified Fresh ou algum link", async () => {
   const day = newWeek();
   const tmdbId = newTmdbId();
   const movies = [movie("a", tmdbId)];
   const sessions = [session("a", `${day}T19:00`)];
-  const ratings = (votes: number, link: unknown = null) => [{
+  const ratings = (votes: number, link: unknown = null, certifiedFresh = false) => [{
     tmdb_id: tmdbId,
     imdb: { rating: 7.1, votes },
-    tomatometer: { score: 80, source: "omdb" },
+    tomatometer: { score: 80, source: "rotten_tomatoes_site", certified_fresh: certifiedFresh },
     rotten_tomatoes_link: link,
   }];
   const updateRatings = (movieRatings: unknown[], clock: string, collectionId?: string) =>
@@ -207,6 +207,20 @@ Deno.test("o fim de uma recoleta publica quando a atualização de notas dela mu
   const newLink = await recollect("10:00");
   await updateRatings(ratings(1300, link), at(day, "10:05"), newLink);
   assertEquals((await finish(newLink, at(day, "10:10"))).body.site_publication, true);
+
+  const gainsCertifiedFresh = await recollect("10:20");
+  await updateRatings(ratings(1300, link, true), at(day, "10:25"), gainsCertifiedFresh);
+  assertEquals(
+    (await finish(gainsCertifiedFresh, at(day, "10:30"))).body.site_publication,
+    true,
+  );
+
+  const losesCertifiedFresh = await recollect("10:40");
+  await updateRatings(ratings(1300, link), at(day, "10:45"), losesCertifiedFresh);
+  assertEquals(
+    (await finish(losesCertifiedFresh, at(day, "10:50"))).body.site_publication,
+    true,
+  );
 
   await recordSiteReversion(at(day, "11:00"));
   const suspended = await recollect("12:00");

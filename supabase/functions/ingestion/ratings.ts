@@ -45,6 +45,27 @@ const RottenTomatoesLink = z.strictObject({
   }
 });
 
+// The Tomatometer with its origin and whether Rotten Tomatoes gave the movie
+// Certified Fresh. Only the movie page on the Rotten Tomatoes site shows the
+// seal, so a Tomatometer from OMDb never has it. Without the field, as the
+// Hermes sent it before the seal, the movie counts as without it.
+const Tomatometer = z.strictObject({
+  score: z.int().min(0).max(100),
+  source: z.enum(["omdb", "rotten_tomatoes_site"]),
+  certified_fresh: z.boolean().optional().describe(
+    "Se o Rotten Tomatoes deu o Certified Fresh ao filme, lido da página do filme no site dele. " +
+      "Sem o campo, o filme fica sem o Certified Fresh.",
+  ),
+}).superRefine((tomatometer, context) => {
+  if (tomatometer.source === "omdb" && tomatometer.certified_fresh) {
+    context.addIssue({
+      code: "custom",
+      path: ["certified_fresh"],
+      message: "O OMDb não informa o Certified Fresh. Ele vem só do site do Rotten Tomatoes.",
+    });
+  }
+});
+
 const RatingsPlanRequest = z.strictObject({ collection_id: z.uuid() });
 
 const UpdateRatingsRequest = z.strictObject({
@@ -57,10 +78,9 @@ const UpdateRatingsRequest = z.strictObject({
       rating: oneDecimal(1, 10),
       votes: z.int().positive().max(MAX_INTEGER),
     }).nullable().describe("A nota do IMDb com os votos, ou null quando o filme não tem nota."),
-    tomatometer: z.strictObject({
-      score: z.int().min(0).max(100),
-      source: z.enum(["omdb", "rotten_tomatoes_site"]),
-    }).nullable().describe("O Tomatometer com a origem, ou null quando o filme não tem."),
+    tomatometer: Tomatometer.nullable().describe(
+      "O Tomatometer com a origem e o Certified Fresh, ou null quando o filme não tem.",
+    ),
     rotten_tomatoes_link: RottenTomatoesLink.nullable().optional().describe(
       "O link do Rotten Tomatoes, que é a página do filme ou a busca do site, ou null para " +
         "apagar o guardado. Só a atualização sem coleta pode omiti-lo, e o guardado fica.",
@@ -115,10 +135,12 @@ export async function ratingsPlan(body: unknown, { database, now }: Context): Pr
   return collectionRefusal(planned.refusal);
 }
 
-// Records the IMDb and Rotten Tomatoes ratings of the movies and their Rotten
-// Tomatoes link, with the date of the update. A null rating or link means the
-// movie has none, and replaces what was kept. Inside a collection, a changed
-// rating or link makes a recollection end with a site publication.
+// Records the IMDb and Rotten Tomatoes ratings of the movies, with Certified
+// Fresh, and their Rotten Tomatoes link, with the date of the update. A null
+// rating or link means the movie has none, and replaces what was kept; a null
+// Tomatometer also erases Certified Fresh. Inside a collection, a changed
+// rating, Certified Fresh or link makes a recollection end with a site
+// publication.
 export async function updateRatings(body: unknown, { database, now }: Context): Promise<Response> {
   const parsed = UpdateRatingsRequest.safeParse(body);
   if (!parsed.success) {

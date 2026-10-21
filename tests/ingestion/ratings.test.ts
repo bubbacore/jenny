@@ -67,7 +67,8 @@ async function newMovie(): Promise<number> {
 async function ratings(tmdbId: number) {
   const [row] = await readView(
     "movies",
-    `tmdb_id=eq.${tmdbId}&select=imdb_rating,imdb_votes,tomatometer,tomatometer_source,ratings_updated_at`,
+    `tmdb_id=eq.${tmdbId}&select=imdb_rating,imdb_votes,tomatometer,tomatometer_source,` +
+      "certified_fresh,ratings_updated_at",
   );
   return row;
 }
@@ -83,7 +84,8 @@ async function rottenTomatoesLink(tmdbId: number) {
 async function siteRatings(tmdbId: number) {
   const [row] = await readView(
     "site_movies",
-    `tmdb_id=eq.${tmdbId}&select=imdb_rating,imdb_votes,tomatometer,rotten_tomatoes_url`,
+    `tmdb_id=eq.${tmdbId}&select=imdb_rating,imdb_votes,tomatometer,rotten_tomatoes_url,` +
+      "certified_fresh",
   );
   return row;
 }
@@ -104,6 +106,7 @@ Deno.test("as notas de um filme são atualizadas com a origem e a data, e chegam
     imdb_votes: 152340,
     tomatometer: 88,
     tomatometer_source: "omdb",
+    certified_fresh: false,
     ratings_updated_at: "2026-10-12T10:00:00+00:00",
   });
   assertEquals(await siteRatings(tmdbId), {
@@ -111,6 +114,7 @@ Deno.test("as notas de um filme são atualizadas com a origem e a data, e chegam
     imdb_votes: 152340,
     tomatometer: 88,
     rotten_tomatoes_url: null,
+    certified_fresh: false,
   });
 });
 
@@ -134,6 +138,7 @@ Deno.test("a atualização seguinte substitui as notas, e uma nota ausente fica 
     imdb_votes: 1200,
     tomatometer: null,
     tomatometer_source: null,
+    certified_fresh: false,
     ratings_updated_at: "2026-10-19T10:00:00+00:00",
   });
 });
@@ -182,6 +187,97 @@ Deno.test("a atualização de notas recusa o que foge do contrato, citando o cam
     path: "/movies/1/tmdb_id",
     message: "Filme repetido.",
   }]);
+});
+
+Deno.test("o Certified Fresh entra com o Tomatometer do site do Rotten Tomatoes e sai quando o filme o perde ou fica sem Tomatometer", async () => {
+  const tmdbId = await newMovie();
+  const clock = at(newWeek(), "07:00");
+  const collection = await collect("manual", clock);
+  const update = (tomatometer: unknown) =>
+    updateRatings(
+      [{
+        tmdb_id: tmdbId,
+        imdb: { rating: 8.4, votes: 20000 },
+        tomatometer,
+        rotten_tomatoes_link: moviePage(tmdbId),
+      }],
+      clock,
+      collection,
+    );
+  const certified = { score: 97, source: "rotten_tomatoes_site", certified_fresh: true };
+
+  const first = await update(certified);
+  assertEquals(first.status, 200, JSON.stringify(first.body));
+  assertEquals((await ratings(tmdbId)).certified_fresh, true);
+  assertEquals(await siteRatings(tmdbId), {
+    imdb_rating: 8.4,
+    imdb_votes: 20000,
+    tomatometer: 97,
+    rotten_tomatoes_url: moviePage(tmdbId).url,
+    certified_fresh: true,
+  });
+
+  await update({ score: 68, source: "rotten_tomatoes_site", certified_fresh: false });
+  assertEquals((await siteRatings(tmdbId)).certified_fresh, false);
+
+  await update(certified);
+  await update(null);
+  assertEquals((await ratings(tmdbId)).certified_fresh, false);
+  assertEquals((await siteRatings(tmdbId)).certified_fresh, false);
+});
+
+Deno.test("um Tomatometer sem o Certified Fresh, como o Hermes o enviava antes do selo, grava o filme sem ele", async () => {
+  const tmdbId = await newMovie();
+  await updateRatings([{
+    tmdb_id: tmdbId,
+    imdb: null,
+    tomatometer: { score: 95, source: "rotten_tomatoes_site", certified_fresh: true },
+  }]);
+
+  const { status, body } = await updateRatings([{
+    tmdb_id: tmdbId,
+    imdb: null,
+    tomatometer: { score: 95, source: "rotten_tomatoes_site" },
+  }], "2026-10-19T07:00:00-03:00");
+
+  assertEquals(status, 200, JSON.stringify(body));
+  assertEquals(await ratings(tmdbId), {
+    imdb_rating: null,
+    imdb_votes: null,
+    tomatometer: 95,
+    tomatometer_source: "rotten_tomatoes_site",
+    certified_fresh: false,
+    ratings_updated_at: "2026-10-19T10:00:00+00:00",
+  });
+});
+
+Deno.test("a atualização de notas recusa o Certified Fresh num Tomatometer do OMDb, citando o caminho", async () => {
+  const tmdbId = await newMovie();
+
+  const { status, body } = await updateRatings([
+    {
+      tmdb_id: tmdbId,
+      imdb: null,
+      tomatometer: { score: 90, source: "omdb", certified_fresh: true },
+    },
+    {
+      tmdb_id: newTmdbId(),
+      imdb: null,
+      tomatometer: { score: 90, source: "rotten_tomatoes_site", certified_fresh: "sim" },
+    },
+  ]);
+
+  assertEquals(status, 400);
+  assertEquals(body.error.code, "invalid_request");
+  assertEquals(body.error.issues.map((issue: any) => issue.path), [
+    "/movies/0/tomatometer/certified_fresh",
+    "/movies/1/tomatometer/certified_fresh",
+  ]);
+  assertEquals(
+    body.error.issues[0].message,
+    "O OMDb não informa o Certified Fresh. Ele vem só do site do Rotten Tomatoes.",
+  );
+  assertEquals((await ratings(tmdbId)).ratings_updated_at, null);
 });
 
 Deno.test("a atualização sem coleta mantém o link do Rotten Tomatoes guardado quando não o envia", async () => {
@@ -352,6 +448,7 @@ Deno.test("a atualização de notas da coleta grava o link do Rotten Tomatoes, e
     imdb_votes: 5000,
     tomatometer: 93,
     rotten_tomatoes_url: moviePage(tmdbId).url,
+    certified_fresh: false,
   });
 
   await updateRatings(
@@ -379,6 +476,7 @@ Deno.test("a atualização de notas da coleta grava o link do Rotten Tomatoes, e
     imdb_votes: null,
     tomatometer: null,
     rotten_tomatoes_url: null,
+    certified_fresh: false,
   });
   assertEquals(await rottenTomatoesLink(tmdbId), {
     rotten_tomatoes_url: null,
