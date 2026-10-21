@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.20.0](https://github.com/bubbacore/jenny/compare/v0.19.0...v0.20.0) (2026-10-21)
+
+
+### Features
+
+* **ingestion:** record Certified Fresh with the Tomatometer ([dbc694f](https://github.com/bubbacore/jenny/commit/dbc694f416904b0f3b0fb04446ef5e84d4ffce8d))
+
 ## [0.19.0](https://github.com/bubbacore/jenny/compare/v0.18.0...v0.19.0) (2026-10-19)
 
 
