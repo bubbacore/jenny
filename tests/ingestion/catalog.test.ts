@@ -205,6 +205,7 @@ Deno.test("um filme novo grava os metadados, os créditos e as imagens enviados 
     imdb_votes: null,
     tomatometer: null,
     rotten_tomatoes_url: null,
+    certified_fresh: false,
   });
   assertEquals(await storedMovie(id, "budget_usd,revenue_usd"), [
     { budget_usd: 1_500_000, revenue_usd: 3_000_000_000 },
