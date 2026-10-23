@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.21.0](https://github.com/bubbacore/jenny/compare/v0.20.0...v0.21.0) (2026-10-23)
+
+
+### Features
+
+* **db:** record movies without TMDB in the catalog ([a4f9f13](https://github.com/bubbacore/jenny/commit/a4f9f134bfd3957729387a4143870e0508eaaba4))
+* **ingestion:** accept movies without TMDB in the reading ([02494c5](https://github.com/bubbacore/jenny/commit/02494c55965791b7c65db5626f35c0d82410486c))
+
 ## [0.20.0](https://github.com/bubbacore/jenny/compare/v0.19.0...v0.20.0) (2026-10-21)
 
 
