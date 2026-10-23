@@ -5,6 +5,7 @@ import {
   addDays,
   at,
   collect,
+  finish,
   movie,
   newTmdbId,
   newWeek,
@@ -617,4 +618,152 @@ Deno.test("um filme sem TMDB do acervo sem pôster ganha o pôster numa leitura 
   );
   assertEquals(later.body.result, "success", JSON.stringify(later.body));
   assertEquals((await siteMovie(`recital-${run}`)).poster, shown);
+});
+
+function link(request: Record<string, unknown>, clock?: string) {
+  return callIngestion("link-movie-without-tmdb", request, { clock });
+}
+
+Deno.test("a ligação grava o título na fonte resolvido em cada cinema com sessões do filme sem TMDB, e a recoleta passa as sessões para o filme do TMDB", async () => {
+  const day = newWeek();
+  const title = `Gustavo Mioto Ao Vivo ${run}`;
+  const slug = `gustavo-mioto-ao-vivo-${run}`;
+  const other = newTmdbId();
+  const chosen = newTmdbId();
+  const sessions = [session("other", `${day}T18:00`), session("show", `${day}T20:00`)];
+  await callIngestion("record-site-publication", {}, { clock: at(day, "05:00") });
+
+  const daily = await collect("daily", at(day, "06:00"));
+  for (const [index, cinema] of ["cine-alquimia", "cinemark-riomar"].entries()) {
+    const { body } = await read(
+      cinema,
+      "ingresso_com",
+      [movie("other", other), withoutTmdb("show", title)],
+      sessions,
+      at(day, `06:0${index}`),
+      {},
+      daily,
+    );
+    assertEquals(body.result, "success", JSON.stringify(body));
+  }
+  const elsewhere = await read(
+    "cinesercla-premio",
+    "cinesercla_site",
+    [movie("other", other)],
+    [session("other", `${day}T18:00`)],
+    at(day, "06:02"),
+    {},
+    daily,
+  );
+  assertEquals(elsewhere.body.result, "success", JSON.stringify(elsewhere.body));
+  await finish(daily, at(day, "06:30"));
+  assert(await siteMovie(slug));
+
+  // The owner chose a TMDB movie outside the catalog, and the Hermes may send
+  // the source title in another spelling.
+  const linked = await link(
+    { source_title: `  GUSTAVO mioto ao vivo ${run} `, tmdb_id: chosen },
+    at(
+      day,
+      "07:00",
+    ),
+  );
+  assertEquals(linked.status, 200, JSON.stringify(linked.body));
+  assertEquals(linked.body, { recollection_cinemas: ["cine-alquimia", "cinemark-riomar"] });
+
+  const plan = await callIngestion("collection-plan", {
+    collection_type: "manual",
+    cinemas: ["cine-alquimia", "cinemark-riomar", "cinesercla-premio"],
+  }, { clock: at(day, "07:01") });
+  assertEquals(plan.status, 200, JSON.stringify(plan.body));
+  const resolvedIn = (cinema: string) =>
+    plan.body.cinemas.find((listed: any) => listed.slug === cinema).resolved_source_titles
+      .filter((resolved: any) => resolved.tmdb_id === chosen);
+  assertEquals(resolvedIn("cine-alquimia"), [{
+    source_title: `GUSTAVO mioto ao vivo ${run}`,
+    tmdb_id: chosen,
+  }]);
+  assertEquals(resolvedIn("cinemark-riomar").length, 1);
+  assertEquals(resolvedIn("cinesercla-premio"), []);
+
+  // The recollection of the cinemas returned: the first brings the chosen
+  // movie with its TMDB data, as a movie outside the catalog needs, and the
+  // second still sends the movie without TMDB, which the link turns into the
+  // chosen movie.
+  const recollection = await collect("recollection", at(day, "07:05"), {
+    cinemas: linked.body.recollection_cinemas,
+  });
+  const readings = [
+    await read(
+      "cine-alquimia",
+      "ingresso_com",
+      [movie("other", other), movie("show", chosen, { source_title: title })],
+      sessions,
+      at(day, "07:06"),
+      {},
+      recollection,
+    ),
+    await read(
+      "cinemark-riomar",
+      "ingresso_com",
+      [movie("other", other), withoutTmdb("show", title)],
+      sessions,
+      at(day, "07:07"),
+      {},
+      recollection,
+    ),
+  ];
+  for (const { body } of readings) {
+    assertEquals(body.result, "success", JSON.stringify(body));
+    assertEquals(body.sessions, { received: 2, discarded: 0, accepted: 2, retained: 0 });
+    assertEquals(alertsOf("movie-without-tmdb", body.alerts), []);
+    assertEquals(
+      (await readView("readings", `id=eq.${body.reading_id}&select=sessions_released`))[0],
+      { sessions_released: 1 },
+    );
+  }
+  for (const cinema of ["cine-alquimia", "cinemark-riomar"]) {
+    assertEquals(await showtimeMovies(cinema), [`movie-${other}`, `movie-${chosen}`], cinema);
+  }
+  assertEquals(await siteMovie(slug), undefined);
+  assertEquals((await siteMovie(`movie-${chosen}`)).tmdb_id, chosen);
+  assertEquals((await finish(recollection, at(day, "07:10"))).body.site_publication, true);
+});
+
+Deno.test("a ligação de um filme que não é filme sem TMDB é recusada com um erro claro", async () => {
+  const day = newWeek();
+  const tmdbTitle = `Filme do TMDB ${run}`;
+  const recorded = await read(
+    "cine-alquimia",
+    "ingresso_com",
+    [movie("tmdb", newTmdbId(), { source_title: tmdbTitle })],
+    [session("tmdb", `${day}T19:00`)],
+    at(day, "08:00"),
+  );
+  assertEquals(recorded.body.result, "success", JSON.stringify(recorded.body));
+
+  for (const sourceTitle of [tmdbTitle, `Título que nunca apareceu ${run}`]) {
+    const { status, body } = await link({ source_title: sourceTitle, tmdb_id: newTmdbId() });
+    assertEquals(status, 400, sourceTitle);
+    assertEquals(body.error.code, "unknown_movie_without_tmdb", sourceTitle);
+    assertEquals(
+      body.error.message,
+      "Nenhum filme sem TMDB tem este título na fonte. Só um filme sem TMDB pode ser ligado a " +
+        "um filme do TMDB.",
+    );
+    assertEquals(body.error.issues.map((issue: any) => issue.path), ["/source_title"]);
+  }
+
+  for (
+    const [request, paths] of [
+      [{ source_title: tmdbTitle }, ["/tmdb_id"]],
+      [{ source_title: " ", tmdb_id: 0 }, ["/source_title", "/tmdb_id"]],
+      [{ source_title: tmdbTitle, tmdb_id: 1, cinema: "cine-alquimia" }, ["/cinema"]],
+    ] as const
+  ) {
+    const { status, body } = await link(request);
+    assertEquals(status, 400, JSON.stringify(request));
+    assertEquals(body.error.code, "invalid_request");
+    assertEquals(body.error.issues.map((issue: any) => issue.path), paths, JSON.stringify(request));
+  }
 });
