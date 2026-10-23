@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.22.0](https://github.com/bubbacore/jenny/compare/v0.21.0...v0.22.0) (2026-10-23)
+
+
+### Features
+
+* **ingestion:** link a movie without TMDB to a TMDB movie ([2ed668c](https://github.com/bubbacore/jenny/commit/2ed668c959f31fd59953fcda83a16d4d9136d08c))
+* **ingestion:** record the source poster of movies without TMDB ([4faed4e](https://github.com/bubbacore/jenny/commit/4faed4e6176eb11ab642a7678a6528c1da0e4a11))
+
 ## [0.21.0](https://github.com/bubbacore/jenny/compare/v0.20.0...v0.21.0) (2026-10-23)
 
 
