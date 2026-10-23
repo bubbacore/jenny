@@ -30,6 +30,9 @@ const movieYear = z.int().min(1870).max(2100);
 // The path of an image in TMDB, like /kqjL17yufvn9OVLyXYpvtyrFfak.jpg.
 export const tmdbImagePath = z.string().regex(/^\/[A-Za-z0-9_-]+\.[A-Za-z0-9]+$/);
 
+// The address of a poster in the main source, for a movie without TMDB.
+export const sourcePosterUrl = z.url({ protocol: /^https?$/ });
+
 const imagePath = (description: string) =>
   tmdbImagePath.describe(
     `${description} A imagem precisa ter sido gravada antes com record-image.`,
@@ -108,6 +111,10 @@ const WithoutTmdb = z.strictObject({
   year: movieYear.optional().describe("O ano, quando a fonte o informa."),
   duration_minutes: z.int().positive().max(32_767).optional().describe(
     "A duração em minutos, quando a fonte a informa.",
+  ),
+  poster: sourcePosterUrl.optional().describe(
+    "O endereço do pôster na fonte principal, quando a fonte o publica. A imagem precisa ter " +
+      "sido gravada antes com record-image, pelo mesmo endereço.",
   ),
 }).meta({ id: "WithoutTmdb" });
 
