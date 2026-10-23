@@ -6,6 +6,7 @@ import { collectionSummary } from "./collection-summary.ts";
 import { dailyCollectionStatus } from "./daily-collection-status.ts";
 import { finishCollection } from "./finish-collection.ts";
 import { failure } from "./http.ts";
+import { linkMovieWithoutTmdb } from "./link-movie-without-tmdb.ts";
 import { ratingsPlan, updateRatings } from "./ratings.ts";
 import { recollectionCinemas } from "./recollection-cinemas.ts";
 import { recordImage } from "./record-image.ts";
@@ -33,6 +34,7 @@ const operations: Record<string, { caller: Caller; run: Operation }> = {
   "recollection-cinemas": { caller: "hermes", run: recollectionCinemas },
   "resolve-pending-identification": { caller: "hermes", run: resolvePendingIdentification },
   "resolve-pending-ticket-type": { caller: "hermes", run: resolvePendingTicketType },
+  "link-movie-without-tmdb": { caller: "hermes", run: linkMovieWithoutTmdb },
   "finish-collection": { caller: "hermes", run: finishCollection },
   "collection-summary": { caller: "hermes", run: collectionSummary },
   "record-site-reversion": { caller: "hermes", run: recordSiteReversion },
