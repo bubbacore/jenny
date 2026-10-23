@@ -531,6 +531,11 @@
           "type": "integer",
           "exclusiveMinimum": 0,
           "maximum": 32767
+        },
+        "poster": {
+          "description": "O endereço do pôster na fonte principal, quando a fonte o publica. A imagem precisa ter sido gravada antes com record-image, pelo mesmo endereço.",
+          "type": "string",
+          "format": "uri"
         }
       },
       "required": [

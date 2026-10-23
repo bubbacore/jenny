@@ -1,6 +1,6 @@
 // deno-lint-ignore-file no-explicit-any
 import { assert, assertEquals } from "@std/assert";
-import { callIngestion, readView } from "./local.ts";
+import { apiUrl, callIngestion, readView, secretKey } from "./local.ts";
 import {
   addDays,
   at,
@@ -326,7 +326,7 @@ Deno.test("o plano da coleta lista o filme sem TMDB com os campos que faltam, e 
   assertEquals(first.body.result, "success", JSON.stringify(first.body));
   assertEquals(await listed(), {
     normalized_source_title: normalized,
-    missing: ["year", "duration_minutes"],
+    missing: ["year", "duration_minutes", "poster"],
   });
 
   const second = await read(
@@ -345,7 +345,7 @@ Deno.test("o plano da coleta lista o filme sem TMDB com os campos que faltam, e 
   assertEquals(second.body.result, "success", JSON.stringify(second.body));
   assertEquals(await listed(), {
     normalized_source_title: normalized,
-    missing: ["duration_minutes"],
+    missing: ["duration_minutes", "poster"],
   });
 
   const third = await read(
@@ -358,7 +358,7 @@ Deno.test("o plano da coleta lista o filme sem TMDB com os campos que faltam, e 
     at(day, "10:00"),
   );
   assertEquals(third.body.result, "success", JSON.stringify(third.body));
-  assertEquals(await listed(), { normalized_source_title: normalized, missing: [] });
+  assertEquals(await listed(), { normalized_source_title: normalized, missing: ["poster"] });
 
   const movie = await siteMovie(`stand-up-especial-${run}`);
   assertEquals(
@@ -425,4 +425,196 @@ Deno.test("o filme sem TMDB fica fora do plano da reimportação e do plano das 
   });
   assertEquals(ratings.status, 200, JSON.stringify(ratings.body));
   assert(ratings.body.movies.every((planned: any) => planned.tmdb_id !== null));
+});
+
+// A 1x1 PNG.
+const PNG =
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
+
+// The start of a JPEG, enough for the ingestion to know the format.
+const JPEG = btoa(String.fromCharCode(0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46));
+
+let postersTaken = 0;
+
+// An address in the main source no other run uses, like the posters of the
+// ingresso.com sessions API.
+function newPosterUrl(extension = "jpg"): string {
+  return `https://ingresso-a.akamaihd.net/prd/img/movie/show-${run}/${postersTaken++}.${extension}`;
+}
+
+function recordPoster(sourceUrl: string, content = PNG) {
+  return callIngestion("record-image", { source_url: sourceUrl, content });
+}
+
+// Records a new source poster and returns its address in the source.
+async function newPoster(): Promise<string> {
+  const sourceUrl = newPosterUrl();
+  const { status, body } = await recordPoster(sourceUrl);
+  assertEquals(status, 200, JSON.stringify(body));
+  return sourceUrl;
+}
+
+Deno.test("o registro da imagem grava o pôster de um filme sem TMDB pelo endereço dele na fonte", async () => {
+  const sourceUrl = newPosterUrl();
+  const { status, body } = await recordPoster(sourceUrl);
+
+  assertEquals(status, 200, JSON.stringify(body));
+  assertEquals(body.source_url, sourceUrl);
+  assert(/^source-[0-9a-f]{64}\.png$/.test(body.storage_path), body.storage_path);
+  assertEquals([body.content_type, body.size_bytes], ["image/png", 70]);
+
+  const stored = await fetch(`${apiUrl}/storage/v1/object/images/${body.storage_path}`, {
+    headers: { apikey: secretKey, authorization: `Bearer ${secretKey}` },
+  });
+  assertEquals(stored.status, 200);
+  assertEquals(new Uint8Array(await stored.arrayBuffer()).length, 70);
+
+  // A new upload of the same address replaces the poster.
+  const again = await recordPoster(sourceUrl, JPEG);
+  assertEquals(again.status, 200, JSON.stringify(again.body));
+  assertEquals(again.body.content_type, "image/jpeg");
+  assertEquals(again.body.storage_path, body.storage_path.replace(/\.png$/, ".jpg"));
+  const [recorded] = await readView(
+    "source_posters",
+    `source_url=eq.${encodeURIComponent(sourceUrl)}&select=storage_path,content_type,size_bytes`,
+  );
+  assertEquals(recorded, {
+    storage_path: again.body.storage_path,
+    content_type: "image/jpeg",
+    size_bytes: 10,
+  });
+});
+
+Deno.test("o registro da imagem recusa um pôster da fonte que não é JPEG nem PNG ou que passa de 2 MiB", async () => {
+  // A WebP, as the ingresso.com publishes its posters.
+  const webp = await recordPoster(newPosterUrl("webp"), btoa("RIFF\x00\x00\x00\x00WEBPVP8 "));
+  assertEquals(webp.status, 400);
+  assertEquals(webp.body.error.code, "invalid_image");
+  assertEquals(webp.body.error.issues.map((issue: any) => issue.path), ["/content"]);
+
+  const large = new Uint8Array(2 * 1024 * 1024 + 1);
+  large.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+  const tooLarge = await recordPoster(
+    newPosterUrl(),
+    btoa(Array.from(large, (byte) => String.fromCharCode(byte)).join("")),
+  );
+  assertEquals(tooLarge.status, 400);
+  assertEquals(tooLarge.body.error.code, "invalid_image");
+  assertEquals(tooLarge.body.error.message, "A imagem passa de 2 MiB.");
+
+  const cases: [string, Record<string, unknown>, string[]][] = [
+    ["sem o caminho nem o endereço", { content: PNG }, ["/tmdb_path"]],
+    ["com o caminho e o endereço", {
+      tmdb_path: "/poster.png",
+      source_url: newPosterUrl(),
+      content: PNG,
+    }, ["/tmdb_path"]],
+    ["com um endereço fora da web", { source_url: "ftp://fonte/poster.png", content: PNG }, [
+      "/source_url",
+    ]],
+  ];
+  for (const [name, request, paths] of cases) {
+    const { status, body } = await callIngestion("record-image", request);
+    assertEquals(status, 400, name);
+    assertEquals(body.error.code, "invalid_request", name);
+    assertEquals(body.error.issues.map((issue: any) => issue.path), paths, name);
+  }
+});
+
+Deno.test("uma leitura que cita o pôster registrado mostra-o na visão dos filmes do site, e uma que cita um pôster não registrado é erro de contrato", async () => {
+  const day = newWeek();
+  const title = `Turnê do Pôster ${run}`;
+  const poster = await newPoster();
+  const recorded = await read(
+    "cine-alquimia",
+    "ingresso_com",
+    [withoutTmdb("show", title, { poster })],
+    [session("show", `${day}T19:00`)],
+    at(day, "08:00"),
+  );
+  assertEquals(recorded.body.result, "success", JSON.stringify(recorded.body));
+
+  const [stored] = await readView(
+    "source_posters",
+    `source_url=eq.${encodeURIComponent(poster)}&select=storage_path`,
+  );
+  assertEquals((await siteMovie(`turne-do-poster-${run}`)).poster, stored.storage_path);
+
+  const unrecorded = await read(
+    "cine-alquimia",
+    "ingresso_com",
+    [
+      withoutTmdb("other", `Outro Show ${run}`),
+      withoutTmdb("show", `Show sem Registro ${run}`, { poster: newPosterUrl() }),
+    ],
+    [session("show", `${day}T19:00`)],
+    at(day, "09:00"),
+  );
+  assertEquals(unrecorded.status, 400);
+  assertEquals(unrecorded.body.error.code, "invalid_reading");
+  assertEquals(unrecorded.body.error.issues.map((issue: any) => issue.path), [
+    "/reading/movies/1/without_tmdb/poster",
+  ]);
+  assertEquals(await siteMovie(`show-sem-registro-${run}`), undefined);
+
+  const outsideTheWeb = await callIngestion("record-reading", {
+    reading_id: crypto.randomUUID(),
+    collection_release: "v0.1.0",
+    reading: {
+      cinema: "cine-alquimia",
+      source: "ingresso_com",
+      status: "ok",
+      movies: [withoutTmdb("show", title, { poster: "poster.png" })],
+      sessions: [session("show", `${day}T19:00`)],
+    },
+  });
+  assertEquals(outsideTheWeb.status, 400);
+  assertEquals(outsideTheWeb.body.error.code, "invalid_request");
+  assertEquals(outsideTheWeb.body.error.issues.map((issue: any) => issue.path), [
+    "/reading/movies/0/without_tmdb/poster",
+  ]);
+});
+
+Deno.test("um filme sem TMDB do acervo sem pôster ganha o pôster numa leitura seguinte, que traz só os campos que faltam", async () => {
+  const day = newWeek();
+  const sourceTitle = `Recital ${run}`;
+  const normalized = `recital ${run}`;
+  const missing = async () =>
+    (await moviesWithoutTmdb()).find((movie) => movie.normalized_source_title === normalized)
+      ?.missing;
+
+  const first = await read(
+    "cine-alquimia",
+    "ingresso_com",
+    [withoutTmdb("show", sourceTitle, { year: 2026, duration_minutes: 80 })],
+    [session("show", `${day}T19:00`)],
+    at(day, "08:00"),
+  );
+  assertEquals(first.body.result, "success", JSON.stringify(first.body));
+  assertEquals(await missing(), ["poster"]);
+  assertEquals((await siteMovie(`recital-${run}`)).poster, null);
+
+  const poster = await newPoster();
+  const second = await read(
+    "cine-alquimia",
+    "ingresso_com",
+    [withoutTmdb("show", sourceTitle, { poster })],
+    [session("show", `${day}T19:00`)],
+    at(day, "09:00"),
+  );
+  assertEquals(second.body.result, "success", JSON.stringify(second.body));
+  assertEquals(await missing(), []);
+  const shown = (await siteMovie(`recital-${run}`)).poster;
+  assert(shown?.startsWith("source-"), shown);
+
+  // A later poster does not replace the one the movie already has.
+  const later = await read(
+    "cine-alquimia",
+    "ingresso_com",
+    [withoutTmdb("show", sourceTitle, { poster: await newPoster() })],
+    [session("show", `${day}T19:00`)],
+    at(day, "10:00"),
+  );
+  assertEquals(later.body.result, "success", JSON.stringify(later.body));
+  assertEquals((await siteMovie(`recital-${run}`)).poster, shown);
 });
