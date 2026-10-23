@@ -98,10 +98,26 @@ export const Tmdb = z.strictObject({
   }).optional(),
 }).meta({ id: "Tmdb" });
 
+const WithoutTmdb = z.strictObject({
+  title: nonBlank.describe(
+    "O título na fonte sem as marcas de idioma e formato, como (Leg) ou 3D, com o resto mantido.",
+  ),
+  original_title: nonBlank.optional().describe(
+    "O título original, quando a fonte o informa. Sem ele, vale o título.",
+  ),
+  year: movieYear.optional().describe("O ano, quando a fonte o informa."),
+  duration_minutes: z.int().positive().max(32_767).optional().describe(
+    "A duração em minutos, quando a fonte a informa.",
+  ),
+}).meta({ id: "WithoutTmdb" });
+
 const Movie = z.strictObject({
   key: nonBlank.describe("Chave do filme dentro da leitura, citada pelas sessões."),
   source_title: nonBlank.describe("O título na fonte, como a fonte principal o publica."),
-  tmdb_id: tmdbId.describe("O identificador do TMDB proposto pelo Hermes."),
+  tmdb_id: tmdbId.nullable().describe(
+    "O identificador do TMDB proposto pelo Hermes, ou null num filme sem TMDB, quando a busca " +
+      "não trouxe candidato ou nenhum candidato é o filme.",
+  ),
   tmdb_search_top_id: tmdbId.nullable().describe(
     "O primeiro resultado da busca no TMDB por título e ano, ou null sem resultado.",
   ),
@@ -132,15 +148,12 @@ const Movie = z.strictObject({
       "os que o TMDB tem; um filme conhecido, só os que o plano apontou como faltantes. " +
       "Num filme conhecido, a ingestão ignora os demais.",
   ),
-}).refine(
-  (movie) =>
-    movie.tmdb_search_top_id !== null ||
-    (movie.tmdb_search_top_title === undefined && movie.tmdb_search_top_year === undefined),
-  {
-    path: ["tmdb_search_top_title"],
-    message: "O título e o ano do primeiro resultado só valem quando a busca trouxe resultado.",
-  },
-).meta({ id: "Movie" });
+  without_tmdb: WithoutTmdb.optional().describe(
+    "Os dados da fonte principal de um filme sem TMDB, obrigatórios quando o tmdb_id é null. " +
+      "Um filme sem TMDB que o plano da coleta já lista traz o título e só os campos que o plano " +
+      "apontou como faltantes; a ingestão ignora os demais.",
+  ),
+}).superRefine(checkMovie).meta({ id: "Movie" });
 
 const Price = z.strictObject({
   source_ticket: nonBlank.describe("O ingresso na fonte, como a fonte o chama."),
@@ -209,11 +222,15 @@ export const Reading = z.discriminatedUnion("status", [
   title: "Leitura",
   description: "A programação completa de um cinema na janela, lida da fonte principal. " +
     "Além do schema, a ingestão recusa: chaves de filme repetidas, sessões que citam um filme " +
-    "fora da leitura, sessões repetidas (mesmo filme do TMDB, início, sala, idioma e formato, " +
-    "com a sessão sem formato contada como 2D), " +
+    "fora da leitura, sessões repetidas (mesmo filme, início, sala, idioma e formato, " +
+    "com a sessão sem formato contada como 2D; o mesmo filme é o mesmo filme do TMDB ou, num " +
+    "filme sem TMDB, o mesmo título na fonte normalizado, sem acentos, em minúsculas e com os " +
+    "espaços reduzidos a um), " +
     "marcadores de sala repetidos, ingressos na fonte repetidos na mesma sessão, datas inexistentes, " +
     "um período do post com o último dia antes do primeiro e o título ou o ano do primeiro " +
     "resultado da busca num filme cuja busca não trouxe resultado. " +
+    "Recusa também um filme sem TMDB sem without_tmdb ou com o filme proposto (tmdb, " +
+    "tmdb_title ou tmdb_year), e without_tmdb num filme com tmdb_id. " +
     "Recusa também uma leitura ok do site oficial sem o post nem no_new_post, ou com os dois, " +
     "um post ou no_new_post numa leitura de outra fonte e uma leitura sem post novo com filmes " +
     "ou sessões.",
@@ -233,6 +250,68 @@ function isRealDateTime(value: string): boolean {
   return parsed.getUTCFullYear() === year && parsed.getUTCMonth() === month - 1 &&
     parsed.getUTCDate() === day && parsed.getUTCHours() === hour &&
     parsed.getUTCMinutes() === minute;
+}
+
+type MovieShape = {
+  tmdb_id: number | null;
+  tmdb_search_top_id: number | null;
+  tmdb_search_top_title?: string;
+  tmdb_search_top_year?: number;
+  tmdb_title?: string;
+  tmdb_year?: number;
+  tmdb?: unknown;
+  without_tmdb?: unknown;
+};
+
+// The top search result is named only when the search brought one. A movie
+// without TMDB brings the source data in place of a proposed movie, and only
+// it brings them.
+function checkMovie(movie: MovieShape, context: z.RefinementCtx) {
+  if (
+    movie.tmdb_search_top_id === null &&
+    (movie.tmdb_search_top_title !== undefined || movie.tmdb_search_top_year !== undefined)
+  ) {
+    context.addIssue({
+      code: "custom",
+      path: ["tmdb_search_top_title"],
+      message: "O título e o ano do primeiro resultado só valem quando a busca trouxe resultado.",
+    });
+  }
+
+  if (movie.tmdb_id !== null) {
+    if (movie.without_tmdb !== undefined) {
+      context.addIssue({
+        code: "custom",
+        path: ["without_tmdb"],
+        message: "Só um filme sem TMDB, com o tmdb_id null, traz os dados da fonte.",
+      });
+    }
+    return;
+  }
+
+  if (movie.without_tmdb === undefined) {
+    context.addIssue({
+      code: "custom",
+      path: ["without_tmdb"],
+      message: "Um filme sem TMDB, com o tmdb_id null, traz os dados da fonte em without_tmdb.",
+    });
+  }
+  for (const field of ["tmdb", "tmdb_title", "tmdb_year"] as const) {
+    if (movie[field] !== undefined) {
+      context.addIssue({
+        code: "custom",
+        path: [field],
+        message: "Um filme sem TMDB não tem filme proposto.",
+      });
+    }
+  }
+}
+
+// The source title as the database normalizes it: without accents, in lower
+// case and with the spaces reduced to one.
+function normalizedSourceTitle(title: string): string {
+  return title.trim().replace(/\s+/g, " ").normalize("NFD").replace(/\p{M}/gu, "")
+    .toLowerCase();
 }
 
 type ReadingShape = {
@@ -264,8 +343,9 @@ function checkReferences(reading: ReadingShape, context: z.RefinementCtx) {
         message: "Nenhum filme da leitura tem esta chave.",
       });
     } else {
+      const movie = reading.movies[movieIndex];
       const identity = JSON.stringify([
-        reading.movies[movieIndex].tmdb_id,
+        movie.tmdb_id ?? normalizedSourceTitle(movie.source_title),
         session.starts_at,
         session.room ?? null,
         session.audio ?? null,
