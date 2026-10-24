@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.23.0](https://github.com/bubbacore/jenny/compare/v0.22.0...v0.23.0) (2026-10-24)
+
+
+### Features
+
+* **db:** read source apostrophe marks as an apostrophe ([f9db72b](https://github.com/bubbacore/jenny/commit/f9db72b58fffaebfaf48f7beeac7554b146700f1))
+
+
+### Bug Fixes
+
+* **ingestion:** read apostrophe marks as one in repeated sessions ([9b69689](https://github.com/bubbacore/jenny/commit/9b69689859ce6e6ac76a4f80023014b8a9856d12))
+
 ## [0.22.0](https://github.com/bubbacore/jenny/compare/v0.21.0...v0.22.0) (2026-10-23)
 
 
