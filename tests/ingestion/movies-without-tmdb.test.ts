@@ -186,6 +186,25 @@ Deno.test("duas sessões no mesmo horário e na mesma sala são repetidas só qu
   });
   assertEquals(same.status, 400);
   assertEquals(same.body.error.issues.map((issue: any) => issue.path), ["/reading/sessions/1"]);
+
+  const apostrophes = await callIngestion("record-reading", {
+    reading_id: crypto.randomUUID(),
+    collection_release: "v0.1.0",
+    reading: {
+      cinema: "cine-alquimia",
+      source: "ingresso_com",
+      status: "ok",
+      movies: [
+        withoutTmdb("one", `Show ´Um\` ${run}`),
+        withoutTmdb("two", `Show ’Um’ ${run}`),
+      ],
+      sessions,
+    },
+  });
+  assertEquals(apostrophes.status, 400);
+  assertEquals(apostrophes.body.error.issues.map((issue: any) => issue.path), [
+    "/reading/sessions/1",
+  ]);
 });
 
 Deno.test("o mesmo título na fonte normalizado é o mesmo filme sem TMDB em cinemas diferentes", async () => {
