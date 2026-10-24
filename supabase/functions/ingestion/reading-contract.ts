@@ -231,8 +231,8 @@ export const Reading = z.discriminatedUnion("status", [
     "Além do schema, a ingestão recusa: chaves de filme repetidas, sessões que citam um filme " +
     "fora da leitura, sessões repetidas (mesmo filme, início, sala, idioma e formato, " +
     "com a sessão sem formato contada como 2D; o mesmo filme é o mesmo filme do TMDB ou, num " +
-    "filme sem TMDB, o mesmo título na fonte normalizado, sem acentos, em minúsculas e com os " +
-    "espaços reduzidos a um), " +
+    "filme sem TMDB, o mesmo título na fonte normalizado, sem acentos, em minúsculas, com os " +
+    "espaços reduzidos a um e com ´, ` e ’ lidos como apóstrofo), " +
     "marcadores de sala repetidos, ingressos na fonte repetidos na mesma sessão, datas inexistentes, " +
     "um período do post com o último dia antes do primeiro e o título ou o ano do primeiro " +
     "resultado da busca num filme cuja busca não trouxe resultado. " +
@@ -315,10 +315,11 @@ function checkMovie(movie: MovieShape, context: z.RefinementCtx) {
 }
 
 // The source title as the database normalizes it: without accents, in lower
-// case and with the spaces reduced to one.
+// case, with the spaces reduced to one and with the marks the sources use in
+// place of the apostrophe read as one.
 function normalizedSourceTitle(title: string): string {
-  return title.trim().replace(/\s+/g, " ").normalize("NFD").replace(/\p{M}/gu, "")
-    .toLowerCase();
+  return title.replace(/[´`’]/g, "'").trim().replace(/\s+/g, " ").normalize("NFD")
+    .replace(/\p{M}/gu, "").toLowerCase();
 }
 
 type ReadingShape = {
