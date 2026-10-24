@@ -224,6 +224,83 @@ Deno.test("o mesmo título na fonte normalizado é o mesmo filme sem TMDB em cin
   );
 });
 
+Deno.test("´, ` e ’ no lugar do apóstrofo dão o mesmo filme sem TMDB, com as sessões de cada cinema e o alerta só na primeira aparição em cada um", async () => {
+  const day = newWeek();
+  const cinesercla = `BTS World Tour ´Arirang\` in São Paulo ${run}: Live Viewing`;
+  const cinemark = `BTS World Tour 'Arirang' In São Paulo ${run}: Live Viewing`;
+  const curly = `BTS World Tour ’Arirang’ in São Paulo ${run}: Live Viewing`;
+  const normalized = `bts world tour 'arirang' in sao paulo ${run}: live viewing`;
+  const slug = `bts-world-tour-arirang-in-sao-paulo-${run}-live-viewing`;
+  const readings: [string, string, string, string][] = [
+    ["cinesercla-premio", "cinesercla_site", cinesercla, "19:00"],
+    ["cinemark-shopping-jardins", "ingresso_com", cinemark, "20:00"],
+    ["cine-alquimia", "ingresso_com", curly, "21:00"],
+  ];
+
+  for (const [index, [cinema, source, title, time]] of readings.entries()) {
+    const { body } = await read(
+      cinema,
+      source,
+      [withoutTmdb("show", title)],
+      [session("show", `${day}T${time}`)],
+      at(day, `08:0${index}`),
+    );
+    assertEquals(body.result, "success", JSON.stringify(body));
+    assertEquals(
+      alertsOf("movie-without-tmdb", body.alerts).map((alert) => alert.subject),
+      [`movie-without-tmdb:${cinema}:${normalized}`],
+      cinema,
+    );
+  }
+
+  for (const [cinema, source, title, time] of readings) {
+    assertEquals(await showtimeMovies(cinema), [slug], cinema);
+
+    // A later reading of the same cinema, in the spelling of another source,
+    // does not alert again.
+    const again = await read(
+      cinema,
+      source,
+      [withoutTmdb("show", title === cinemark ? cinesercla : cinemark)],
+      [session("show", `${day}T${time}`)],
+      at(day, "09:00"),
+    );
+    assertEquals(again.body.result, "success", JSON.stringify(again.body));
+    assertEquals(alertsOf("movie-without-tmdb", again.body.alerts), [], cinema);
+    assertEquals(await showtimeMovies(cinema), [slug], cinema);
+  }
+  assertEquals(
+    (await moviesWithoutTmdb()).filter((listed) => listed.normalized_source_title === normalized)
+      .length,
+    1,
+  );
+  assertEquals((await siteMovie(slug)).title, cinesercla);
+});
+
+Deno.test("um título na fonte que difere em outra coisa que não o sinal do apóstrofo continua sendo outro filme sem TMDB", async () => {
+  const day = newWeek();
+  const titles = [`Show ´Lunar\` ${run}`, `Show "Lunar" ${run}`, `Show Lunar ${run}`];
+  for (const [index, title] of titles.entries()) {
+    const { body } = await read(
+      "cinemark-riomar",
+      "ingresso_com",
+      [withoutTmdb("show", title)],
+      [session("show", `${day}T19:00`)],
+      at(day, `08:0${index}`),
+    );
+    assertEquals(body.result, "success", JSON.stringify(body));
+    assertEquals(alertsOf("movie-without-tmdb", body.alerts).length, 1, title);
+  }
+
+  const listed = (await moviesWithoutTmdb()).map((movie) => movie.normalized_source_title);
+  assertEquals(
+    [`show 'lunar' ${run}`, `show "lunar" ${run}`, `show lunar ${run}`].map((title) =>
+      listed.filter((normalized) => normalized === title).length
+    ),
+    [1, 1, 1],
+  );
+});
+
 Deno.test("o identificador para o endereço do filme sem TMDB vem do título mostrado, com o ano e um número nas colisões, e nunca muda", async () => {
   const day = newWeek();
   const base = `noite-de-gala-${run}`;
@@ -728,6 +805,29 @@ Deno.test("a ligação grava o título na fonte resolvido em cada cinema com ses
   assertEquals(await siteMovie(slug), undefined);
   assertEquals((await siteMovie(`movie-${chosen}`)).tmdb_id, chosen);
   assertEquals((await finish(recollection, at(day, "07:10"))).body.site_publication, true);
+});
+
+Deno.test("a ligação acha o filme sem TMDB pelo título na fonte escrito com ´, ` ou ’ no lugar do apóstrofo", async () => {
+  const day = newWeek();
+  const cases: [string, string][] = [
+    [`Recital ´Noturno\` ${run}`, `Recital 'Noturno' ${run}`],
+    [`Recital 'Matinal' ${run}`, `Recital ’Matinal’ ${run}`],
+    [`Recital ’Vesperal’ ${run}`, `Recital ´Vesperal\` ${run}`],
+  ];
+  for (const [index, [recorded, linkedTitle]] of cases.entries()) {
+    const { body } = await read(
+      "cinesercla-praia-sul",
+      "cinesercla_site",
+      [withoutTmdb("show", recorded)],
+      [session("show", `${day}T19:00`)],
+      at(day, `08:0${index}`),
+    );
+    assertEquals(body.result, "success", JSON.stringify(body));
+
+    const linked = await link({ source_title: linkedTitle, tmdb_id: newTmdbId() });
+    assertEquals(linked.status, 200, `${linkedTitle}: ${JSON.stringify(linked.body)}`);
+    assertEquals(linked.body, { recollection_cinemas: ["cinesercla-praia-sul"] });
+  }
 });
 
 Deno.test("a ligação de um filme que não é filme sem TMDB é recusada com um erro claro", async () => {
