@@ -405,6 +405,32 @@ Deno.test("a resolução grava o título na fonte resolvido, devolve o cinema a 
   assertEquals(again.body.error.code, "unknown_identification");
 });
 
+Deno.test("a resolução acha a identificação pendente pelo título na fonte escrito com ´, ` ou ’ no lugar do apóstrofo", async () => {
+  const day = newWeek();
+  const cases: [string, string, string, number][] = [
+    [`Noite ´Clássica\` ${run}`, `Noite 'Clássica' ${run}`, `noite 'classica' ${run}`, 9800101],
+    [`Noite 'Lírica' ${run}`, `Noite ’Lírica’ ${run}`, `noite 'lirica' ${run}`, 9800103],
+    [`Noite ’Sinfônica’ ${run}`, `Noite ´Sinfônica\` ${run}`, `noite 'sinfonica' ${run}`, 9800105],
+  ];
+  for (const [index, [recorded, typed, normalized, tmdbId]] of cases.entries()) {
+    const opened = await read("cinesercla-praia-sul", "cinesercla_site", [
+      movie("diverge", tmdbId, { source_title: recorded, tmdb_search_top_id: tmdbId + 1 }),
+    ], [
+      session("diverge", `${day}T20:00`),
+    ], at(day, `08:0${index}`));
+    assertEquals(alertsOf("pending-identification", opened.body.alerts).length, 1, recorded);
+
+    const resolved = await resolve({
+      cinema: "cinesercla-praia-sul",
+      source_title: typed,
+      tmdb_id: tmdbId,
+    }, at(day, `09:0${index}`));
+    assertEquals(resolved.status, 200, `${typed}: ${JSON.stringify(resolved.body)}`);
+    assertEquals(resolved.body.recollection_cinema, "cinesercla-praia-sul");
+    assertEquals((await pendingIdentification(normalized)).status, "resolved", typed);
+  }
+});
+
 Deno.test("a resolução recusa um título sem identificação pendente no cinema e uma requisição fora do contrato", async () => {
   const day = newWeek();
   const title = `Maratona Senhor dos Anéis ${run}`;
