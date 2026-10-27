@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.24.0](https://github.com/bubbacore/jenny/compare/v0.23.1...v0.24.0) (2026-10-27)
+
+
+### Features
+
+* **db:** expose previous cinema slugs ([0074375](https://github.com/bubbacore/jenny/commit/0074375b6b9836f214604092874f81404a5a783c))
+
 ## [0.23.1](https://github.com/bubbacore/jenny/compare/v0.23.0...v0.23.1) (2026-10-27)
 
 
