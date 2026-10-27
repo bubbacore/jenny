@@ -46,7 +46,7 @@ Deno.test("um ingresso na fonte sem tipo de ingresso fica em tipo de ingresso pe
     subject: `unknown-ticket-type:ingresso_com:meia bradesco ${run}`,
     effect: "open",
     text: `ingresso.com: o ingresso na fonte "${partner}" ficou em tipo de ingresso pendente. ` +
-      "Cinemark Shopping Jardins o informou em 1 sessão, com R$ 21,00. Atribua o tipo de " +
+      "Cinemark Jardins o informou em 1 sessão, com R$ 21,00. Atribua o tipo de " +
       "ingresso ou indique que ele não é preço de bilheteria; até lá, o valor fica fora do site.",
   }]);
   assertEquals(await sessionPrices("cinemark-shopping-jardins"), {

@@ -82,7 +82,7 @@ Deno.test("um filme cujo identificador proposto difere do primeiro resultado da 
       type: "pending-identification",
       subject: `pending-identification:cinemark-shopping-jardins:sessao cineclube ${run}`,
       effect: "open",
-      text: `Cinemark Shopping Jardins: o título na fonte "${cineclube}" ficou em identificação ` +
+      text: `Cinemark Jardins: o título na fonte "${cineclube}" ficou em identificação ` +
         "pendente, com 1 sessão retida. O filme proposto é Sessão Cineclube, TMDB 9800004, mas a " +
         "busca pelo título na fonte e pelo ano não trouxe resultado. Aceite o filme proposto ou " +
         "escolha outro para liberar as sessões.\n" +
@@ -93,7 +93,7 @@ Deno.test("um filme cujo identificador proposto difere do primeiro resultado da 
       type: "pending-identification",
       subject: `pending-identification:cinemark-shopping-jardins:vingadores (leg) ${run}`,
       effect: "open",
-      text: `Cinemark Shopping Jardins: o título na fonte "${legendado}" ficou em identificação ` +
+      text: `Cinemark Jardins: o título na fonte "${legendado}" ficou em identificação ` +
         "pendente, com 2 sessões retidas. O filme proposto é Vingadores: Ultimato (2019), TMDB " +
         "9800002, mas o primeiro resultado da busca pelo título na fonte e pelo ano é Vingadores: " +
         "Guerra Infinita (2018), TMDB 9800003. Aceite o filme proposto ou escolha outro para " +
