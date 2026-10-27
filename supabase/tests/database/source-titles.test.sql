@@ -43,7 +43,7 @@ reading as (
   from collection
   cross join public.cinemas as cinema
   join public.sources as source on source.cinema_id = cinema.id
-  where cinema.slug in ('cinemark-shopping-jardins', 'cinesercla-premio')
+  where cinema.slug in ('cinemark-jardins', 'cinesercla-premio')
   returning id, cinema_id, source_id
 ),
 cinemark as (
@@ -78,8 +78,8 @@ select recorded.cinema_id, movie.id, recorded.reading_id, movie.starts_at, 'Sala
 from recorded
 cross join lateral (
   values
-    (recorded.cinemark_movie_id, '2026-10-25 20:00'::timestamp, 'cinemark-shopping-jardins'),
-    (recorded.cinesercla_movie_id, '2026-10-25 20:00', 'cinemark-shopping-jardins'),
+    (recorded.cinemark_movie_id, '2026-10-25 20:00'::timestamp, 'cinemark-jardins'),
+    (recorded.cinesercla_movie_id, '2026-10-25 20:00', 'cinemark-jardins'),
     (recorded.cinesercla_movie_id, '2026-10-25 19:00', 'cinesercla-premio'),
     (recorded.cinesercla_movie_id, '2026-10-25 21:00', 'cinesercla-premio')
 ) as movie (id, starts_at, cinema)
@@ -90,8 +90,8 @@ select movie.id, recorded.cinema_id, movie.first_seen_at
 from recorded
 cross join lateral (
   values
-    (recorded.cinemark_movie_id, '2026-10-24 06:01-03'::timestamptz, 'cinemark-shopping-jardins'),
-    (recorded.cinesercla_movie_id, '2026-10-23 06:01-03', 'cinemark-shopping-jardins'),
+    (recorded.cinemark_movie_id, '2026-10-24 06:01-03'::timestamptz, 'cinemark-jardins'),
+    (recorded.cinesercla_movie_id, '2026-10-23 06:01-03', 'cinemark-jardins'),
     (recorded.cinesercla_movie_id, '2026-10-24 06:02-03', 'cinesercla-premio')
 ) as movie (id, first_seen_at, cinema)
 where movie.cinema = recorded.cinema;
@@ -113,7 +113,7 @@ cross join (
     ('o ''retorno''', 'O ''Retorno''', 9800101, '2026-10-20 10:00-03'::timestamptz),
     ('o ´retorno`', 'O ´Retorno`', 9800102, '2026-10-22 10:00-03')
 ) as resolved (normalized, source_title, tmdb_id, resolved_at)
-where recorded.cinema = 'cinemark-shopping-jardins';
+where recorded.cinema = 'cinemark-jardins';
 
 insert into public.pending_identifications (
   cinema_id, source_title, normalized_source_title, proposed_tmdb_id, reason, first_seen_at,
@@ -161,7 +161,7 @@ select results_eq(
   $$,
   $$
     values
-      ('cinemark-shopping-jardins', '2026-10-25 20:00'::timestamp),
+      ('cinemark-jardins', '2026-10-25 20:00'::timestamp),
       ('cinesercla-premio', '2026-10-25 19:00'),
       ('cinesercla-premio', '2026-10-25 21:00')
   $$,
@@ -193,7 +193,7 @@ select results_eq(
   $$,
   $$
     values
-      ('cinemark-shopping-jardins', '2026-10-23 06:01-03'::timestamptz),
+      ('cinemark-jardins', '2026-10-23 06:01-03'::timestamptz),
       ('cinesercla-premio', '2026-10-24 06:02-03')
   $$,
   'a primeira aparição em cada cinema é a mais antiga dos dois filmes'

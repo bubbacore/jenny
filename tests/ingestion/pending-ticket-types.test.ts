@@ -33,7 +33,7 @@ Deno.test("um ingresso na fonte sem tipo de ingresso fica em tipo de ingresso pe
   const day = newWeek();
   const partner = `Meia Bradesco ${run}`;
 
-  const first = await readPriced("cinemark-shopping-jardins", "ingresso_com", day, "08:00", [
+  const first = await readPriced("cinemark-jardins", "ingresso_com", day, "08:00", [
     full,
     { source_ticket: partner, price_cents: 2100 },
   ]);
@@ -49,12 +49,12 @@ Deno.test("um ingresso na fonte sem tipo de ingresso fica em tipo de ingresso pe
       "Cinemark Jardins o informou em 1 sessão, com R$ 21,00. Atribua o tipo de " +
       "ingresso ou indique que ele não é preço de bilheteria; até lá, o valor fica fora do site.",
   }]);
-  assertEquals(await sessionPrices("cinemark-shopping-jardins"), {
+  assertEquals(await sessionPrices("cinemark-jardins"), {
     prices: [{ ticket_type: "full", source_ticket: "INTEIRA", price_cents: 4200 }],
     other_tickets: true,
   });
 
-  const again = await readPriced("cinemark-shopping-jardins", "ingresso_com", day, "10:00", [
+  const again = await readPriced("cinemark-jardins", "ingresso_com", day, "10:00", [
     { source_ticket: partner, price_cents: 2100 },
   ]);
   const otherCinema = await readPriced("cinemark-riomar", "ingresso_com", day, "10:00", [
@@ -86,7 +86,7 @@ Deno.test("o alerta da primeira aparição mostra a faixa de valores e as sessõ
 Deno.test("a resolução vale para os valores guardados de todos os cinemas do mesmo tipo de fonte, sem recoleta", async () => {
   const day = newWeek();
   const partner = `Meia Itaú ${run}`;
-  await readPriced("cinemark-shopping-jardins", "ingresso_com", day, "08:00", [
+  await readPriced("cinemark-jardins", "ingresso_com", day, "08:00", [
     full,
     { source_ticket: partner, price_cents: 2100 },
   ]);
@@ -114,7 +114,7 @@ Deno.test("a resolução vale para os valores guardados de todos os cinemas do m
         "publicação do site.",
     }],
   });
-  assertEquals(await sessionPrices("cinemark-shopping-jardins"), {
+  assertEquals(await sessionPrices("cinemark-jardins"), {
     prices: [
       { ticket_type: "full", source_ticket: "INTEIRA", price_cents: 4200 },
       { ticket_type: "half", source_ticket: partner, price_cents: 2100 },

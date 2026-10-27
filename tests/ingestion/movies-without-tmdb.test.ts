@@ -63,7 +63,7 @@ Deno.test("um filme sem TMDB tem as sessões aceitas, sem falha nem identificaç
   const day = newWeek();
   const title = `Gustavo Mioto Em Inconfundível Tour ${run}`;
   const other = `Hybe Cheering Party ${run}`;
-  const { status, body } = await read("cinemark-shopping-jardins", "ingresso_com", [
+  const { status, body } = await read("cinemark-jardins", "ingresso_com", [
     movie("tmdb", newTmdbId()),
     withoutTmdb("show", title, { year: 2026, duration_minutes: 72 }, { content_rating: "12" }),
     withoutTmdb("festival", `${other} - Hybe Cine Fest 2026`, { title: other }, {
@@ -84,7 +84,7 @@ Deno.test("um filme sem TMDB tem as sessões aceitas, sem falha nem identificaç
   assertEquals(alertsOf("pending-identification", body.alerts), []);
 
   const slug = `gustavo-mioto-em-inconfundivel-tour-${run}`;
-  const shown = await showtimeMovies("cinemark-shopping-jardins");
+  const shown = await showtimeMovies("cinemark-jardins");
   assertEquals(shown.length, 4);
   assertEquals(shown.filter((movie) => movie === slug).length, 2);
   assertEquals(await siteMovie(slug), {
@@ -252,7 +252,7 @@ Deno.test("´, ` e ’ no lugar do apóstrofo dão o mesmo filme sem TMDB, com a
   const slug = `bts-world-tour-arirang-in-sao-paulo-${run}-live-viewing`;
   const readings: [string, string, string, string][] = [
     ["cinesercla-premio", "cinesercla_site", cinesercla, "19:00"],
-    ["cinemark-shopping-jardins", "ingresso_com", cinemark, "20:00"],
+    ["cinemark-jardins", "ingresso_com", cinemark, "20:00"],
     ["cine-alquimia", "ingresso_com", curly, "21:00"],
   ];
 
