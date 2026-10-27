@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.25.0](https://github.com/bubbacore/jenny/compare/v0.24.0...v0.25.0) (2026-10-27)
+
+
+### ⚠ BREAKING CHANGES
+
+* **db:** the current cinema identifier is now cinemark-jardins. Collection clients must use the identifier returned by the current plan. The website preserves previous URLs and selections.
+
+### Bug Fixes
+
+* **db:** shorten the Cinemark Jardins slug ([8f379f3](https://github.com/bubbacore/jenny/commit/8f379f383d10bcb98a0b88966aacfde2fc6af148))
+
 ## [0.24.0](https://github.com/bubbacore/jenny/compare/v0.23.1...v0.24.0) (2026-10-27)
 
 
