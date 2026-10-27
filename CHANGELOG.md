@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.23.1](https://github.com/bubbacore/jenny/compare/v0.23.0...v0.23.1) (2026-10-27)
+
+
+### Bug Fixes
+
+* **db:** align cinema popular names ([333e183](https://github.com/bubbacore/jenny/commit/333e1832663a674c67dc0f3f2ada24f5ee2cbc26))
+
 ## [0.23.0](https://github.com/bubbacore/jenny/compare/v0.22.0...v0.23.0) (2026-10-24)
 
 
