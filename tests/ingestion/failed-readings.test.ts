@@ -99,7 +99,7 @@ Deno.test("um cinema sem nenhuma leitura com sucesso, com uma leitura com falha,
   const day = "2025-06-02";
 
   const { status, body } = await read(
-    "cinemark-shopping-jardins",
+    "cinemark-jardins",
     "ingresso_com",
     [],
     [],
@@ -109,7 +109,7 @@ Deno.test("um cinema sem nenhuma leitura com sucesso, com uma leitura com falha,
   assertEquals(status, 200, JSON.stringify(body));
   assertEquals(body.result, "failure");
   assertEquals(
-    await cinemaDays("cinemark-shopping-jardins", at(day, "08:00")),
+    await cinemaDays("cinemark-jardins", at(day, "08:00")),
     window(day).map((date) => [date, "updating"]),
   );
 });
@@ -404,7 +404,7 @@ Deno.test("os cinemas para recoleta são os de última leitura do dia com falha 
 
   // Read the day before only, and not read at all on the day.
   await read("centerplex-parque-shopping", "veloxtickets", movies, sessions, at(sunday, "20:00"));
-  await read("cinemark-shopping-jardins", "ingresso_com", [], [], at(day, "06:00"), error);
+  await read("cinemark-jardins", "ingresso_com", [], [], at(day, "06:00"), error);
   await read("cinesercla-premio", "cinesercla_site", [], [], at(day, "06:05"), error);
   // Reserved and never recorded: the reservation expires at 06:36.
   const reserved = await start("cinesercla-praia-sul", at(day, "06:06"));
@@ -419,13 +419,13 @@ Deno.test("os cinemas para recoleta são os de última leitura do dia com falha 
     cinemas: [
       "centerplex-parque-shopping",
       "cinema-do-centro",
-      "cinemark-shopping-jardins",
+      "cinemark-jardins",
       "cinesercla-praia-sul",
       "cinesercla-premio",
     ],
   });
 
-  await read("cinemark-shopping-jardins", "ingresso_com", movies, sessions, at(day, "10:00"));
+  await read("cinemark-jardins", "ingresso_com", movies, sessions, at(day, "10:00"));
   await read("cinesercla-praia-sul", "cinesercla_site", movies, sessions, at(day, "10:05"));
   assertEquals((await recollection("21:59")).body, {
     cinemas: ["centerplex-parque-shopping", "cinema-do-centro", "cinesercla-premio"],
@@ -444,13 +444,13 @@ Deno.test("a ausência de preço de bilheteria não é falha e não gera alerta"
     prices: [{ source_ticket: "INTEIRA", kind: "full", price_cents: 4200 }],
   })];
 
-  await read("cinemark-shopping-jardins", "ingresso_com", movies, priced, at(day, "07:00"));
+  await read("cinemark-jardins", "ingresso_com", movies, priced, at(day, "07:00"));
 
-  const { body } = await read("cinemark-shopping-jardins", "ingresso_com", movies, [
+  const { body } = await read("cinemark-jardins", "ingresso_com", movies, [
     session("a", `${day}T19:00`),
   ], at(day, "08:00"));
   assertEquals(body.result, "success");
   assertEquals(body.sessions.accepted, 1);
   assertEquals(body.alerts, []);
-  assertEquals((await showtimes("cinemark-shopping-jardins"))[0].prices, []);
+  assertEquals((await showtimes("cinemark-jardins"))[0].prices, []);
 });

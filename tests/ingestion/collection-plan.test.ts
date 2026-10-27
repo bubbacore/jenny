@@ -31,13 +31,13 @@ Deno.test("o plano da coleta devolve os 7 cinemas da v1 com as configurações d
           post_title_prefix: "Confira a programação",
         },
       }],
+      ["cinemark-jardins", "aracaju", {
+        type: "ingresso_com",
+        config: { theater_id: 313, city_id: 4 },
+      }],
       ["cinemark-riomar", "aracaju", {
         type: "ingresso_com",
         config: { theater_id: 762, city_id: 4 },
-      }],
-      ["cinemark-shopping-jardins", "aracaju", {
-        type: "ingresso_com",
-        config: { theater_id: 313, city_id: 4 },
       }],
       ["cinesercla-praia-sul", "aracaju", {
         type: "cinesercla_site",

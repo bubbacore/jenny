@@ -93,7 +93,7 @@ Deno.test("sem o TMDB, vale a fonte principal de maior confiabilidade, e no empa
   );
 
   await readIn("cinemark-riomar", "ingresso_com", [rated(tied, "14")], monday, "13:00");
-  await readIn("cinemark-shopping-jardins", "ingresso_com", [rated(tied, "16")], monday, "14:00");
+  await readIn("cinemark-jardins", "ingresso_com", [rated(tied, "16")], monday, "14:00");
   assertEquals((await chosen(tied)).content_rating, "16");
   await readIn("cinemark-riomar", "ingresso_com", [rated(tied, "12")], monday, "15:00");
   assertEquals((await chosen(tied)).content_rating, "12");
@@ -246,7 +246,7 @@ Deno.test("a fórmula conta só divergências entre tipos de fonte principal dif
     "10:00",
   );
   await readIn(
-    "cinemark-shopping-jardins",
+    "cinemark-jardins",
     "ingresso_com",
     [rated(sameType, "16")],
     monday,

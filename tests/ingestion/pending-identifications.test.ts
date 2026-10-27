@@ -49,7 +49,7 @@ Deno.test("um filme cujo identificador proposto difere do primeiro resultado da 
   const day = newWeek();
   const legendado = `Vingadores (Leg) ${run}`;
   const cineclube = `Sessão  Cineclube ${run}`;
-  const { status, body } = await read("cinemark-shopping-jardins", "ingresso_com", [
+  const { status, body } = await read("cinemark-jardins", "ingresso_com", [
     movie("match", 9800001),
     movie("diverge", 9800002, {
       source_title: legendado,
@@ -74,13 +74,13 @@ Deno.test("um filme cujo identificador proposto difere do primeiro resultado da 
   assertEquals(status, 200);
   assertEquals(body.result, "success");
   assertEquals(body.sessions, { received: 4, discarded: 0, accepted: 1, retained: 3 });
-  assertEquals((await showtimes("cinemark-shopping-jardins")).map((row) => row.movie), [
+  assertEquals((await showtimes("cinemark-jardins")).map((row) => row.movie), [
     "movie-9800001",
   ]);
   assertEquals(alertsOf("pending-identification", body.alerts), [
     {
       type: "pending-identification",
-      subject: `pending-identification:cinemark-shopping-jardins:sessao cineclube ${run}`,
+      subject: `pending-identification:cinemark-jardins:sessao cineclube ${run}`,
       effect: "open",
       text: `Cinemark Jardins: o título na fonte "${cineclube}" ficou em identificação ` +
         "pendente, com 1 sessão retida. O filme proposto é Sessão Cineclube, TMDB 9800004, mas a " +
@@ -91,7 +91,7 @@ Deno.test("um filme cujo identificador proposto difere do primeiro resultado da 
     },
     {
       type: "pending-identification",
-      subject: `pending-identification:cinemark-shopping-jardins:vingadores (leg) ${run}`,
+      subject: `pending-identification:cinemark-jardins:vingadores (leg) ${run}`,
       effect: "open",
       text: `Cinemark Jardins: o título na fonte "${legendado}" ficou em identificação ` +
         "pendente, com 2 sessões retidas. O filme proposto é Vingadores: Ultimato (2019), TMDB " +
@@ -104,7 +104,7 @@ Deno.test("um filme cujo identificador proposto difere do primeiro resultado da 
     },
   ]);
   assertEquals(await pendingIdentification(`vingadores (leg) ${run}`), {
-    cinema: "cinemark-shopping-jardins",
+    cinema: "cinemark-jardins",
     source_title: legendado,
     proposed_tmdb_id: 9800002,
     search_top_tmdb_id: 9800003,

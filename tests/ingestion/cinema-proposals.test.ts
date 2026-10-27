@@ -191,14 +191,14 @@ Deno.test("a rejeição mantém os valores anteriores, resolve a ocorrência e i
 });
 
 Deno.test("uma proposta diferente substitui a pendente e alimenta a mesma ocorrência", async () => {
-  const cinema = "cinemark-shopping-jardins";
+  const cinema = "cinemark-jardins";
   await updateCinema({ cinema, proposal: newProposal() });
   const replacement = newProposal();
 
   const { body } = await updateCinema({ cinema, proposal: replacement });
   assertEquals(body.proposal, "new");
   assertEquals(body.alerts.map((alert: any) => [alert.subject, alert.effect]), [
-    ["proposal:cinemark-shopping-jardins", "open"],
+    ["proposal:cinemark-jardins", "open"],
   ]);
 
   await decide(cinema, "approve");
