@@ -14,7 +14,8 @@
             "ingresso_com",
             "veloxtickets",
             "cinesercla_site",
-            "official_site"
+            "official_site",
+            "instagram"
           ]
         },
         "movies": {
@@ -34,11 +35,11 @@
           "const": "ok"
         },
         "post": {
-          "description": "O post lido, numa leitura do site oficial com post novo. A fonte do post é a da leitura.",
+          "description": "O post lido, numa leitura do site oficial ou do Instagram com post novo. A fonte do post é a da leitura.",
           "$ref": "#/$defs/Post"
         },
         "no_new_post": {
-          "description": "Indica, numa leitura do site oficial, que não há post novo. A leitura vai sem filmes nem sessões, e a ingestão reaproveita a programação do último post lido.",
+          "description": "Indica, numa leitura do site oficial ou do Instagram, que não há post novo. A leitura vai sem filmes nem sessões, e a ingestão reaproveita a programação do último post lido.",
           "type": "boolean",
           "const": true
         }
@@ -65,7 +66,8 @@
             "ingresso_com",
             "veloxtickets",
             "cinesercla_site",
-            "official_site"
+            "official_site",
+            "instagram"
           ]
         },
         "movies": {
@@ -113,7 +115,8 @@
             "ingresso_com",
             "veloxtickets",
             "cinesercla_site",
-            "official_site"
+            "official_site",
+            "instagram"
           ]
         },
         "movies": {
@@ -150,7 +153,7 @@
     }
   ],
   "title": "Leitura",
-  "description": "A programação completa de um cinema na janela, lida da fonte principal. Além do schema, a ingestão recusa: chaves de filme repetidas, sessões que citam um filme fora da leitura, sessões repetidas (mesmo filme, início, sala, idioma e formato, com a sessão sem formato contada como 2D; o mesmo filme é o mesmo filme do TMDB ou, num filme sem TMDB, o mesmo título na fonte normalizado, sem acentos, em minúsculas, com os espaços reduzidos a um e com ´, ` e ’ lidos como apóstrofo), marcadores de sala repetidos, ingressos na fonte repetidos na mesma sessão, datas inexistentes, um período do post com o último dia antes do primeiro e o título ou o ano do primeiro resultado da busca num filme cuja busca não trouxe resultado. Recusa também um filme sem TMDB sem without_tmdb ou com o filme proposto (tmdb, tmdb_title ou tmdb_year), e without_tmdb num filme com tmdb_id. Recusa também uma leitura ok do site oficial sem o post nem no_new_post, ou com os dois, um post ou no_new_post numa leitura de outra fonte e uma leitura sem post novo com filmes ou sessões.",
+  "description": "A programação completa de um cinema na janela, lida da fonte principal. Além do schema, a ingestão recusa: chaves de filme repetidas, sessões que citam um filme fora da leitura, sessões repetidas (mesmo filme, início, sala, idioma e formato, com a sessão sem formato contada como 2D; o mesmo filme é o mesmo filme do TMDB ou, num filme sem TMDB, o mesmo título na fonte normalizado, sem acentos, em minúsculas, com os espaços reduzidos a um e com ´, ` e ’ lidos como apóstrofo), marcadores de sala repetidos, ingressos na fonte repetidos na mesma sessão, datas inexistentes, um período do post com o último dia antes do primeiro e o título ou o ano do primeiro resultado da busca num filme cuja busca não trouxe resultado. Recusa também um filme sem TMDB sem without_tmdb ou com o filme proposto (tmdb, tmdb_title ou tmdb_year), e without_tmdb num filme com tmdb_id. Recusa também uma leitura ok do site oficial ou do Instagram sem o post nem no_new_post, ou com os dois, um post ou no_new_post numa leitura de outra fonte e uma leitura sem post novo com filmes ou sessões.",
   "$defs": {
     "Movie": {
       "type": "object",
