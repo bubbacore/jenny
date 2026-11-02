@@ -81,7 +81,7 @@ export function post(
   period = { first_day: publishedAt.slice(0, 10), last_day: "9999-12-31" },
 ) {
   return {
-    url: `https://cinemadocentro.com.br/confira-a-programacao-${runBlock}-${postsTaken++}/`,
+    url: `https://www.instagram.com/p/programacao-${runBlock}-${postsTaken++}/`,
     published_at: publishedAt,
     period,
   };
@@ -92,8 +92,11 @@ export function period(firstDay: string, lastDay: string) {
   return { first_day: firstDay, last_day: lastDay };
 }
 
-// A successful reading of the official site reads a post, which is a new one
-// unless the test brings its own post or says there is no new post.
+const POST_SOURCES = ["official_site", "instagram"];
+
+// A successful reading of a source of posts, the official site or Instagram,
+// reads a post, which is a new one unless the test brings its own post or says
+// there is no new post.
 export function reading(
   cinema: string,
   source: string,
@@ -101,7 +104,7 @@ export function reading(
   sessions: unknown[],
   extra: Record<string, unknown> = {},
 ) {
-  const readsPost = source === "official_site" && (extra.status ?? "ok") === "ok" &&
+  const readsPost = POST_SOURCES.includes(source) && (extra.status ?? "ok") === "ok" &&
     !("post" in extra) && !("no_new_post" in extra);
   return {
     cinema,

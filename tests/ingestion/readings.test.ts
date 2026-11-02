@@ -427,7 +427,7 @@ Deno.test("uma leitura fora do contrato é recusada com o caminho de cada campo 
     ["incompleta sem motivo", (b) => b.reading.status = "incomplete", ["/reading/reason"]],
     ["motivo numa leitura ok", (b) => b.reading.reason = "nada", ["/reading/reason"]],
     ["status desconhecido", (b) => b.reading.status = "partial", ["/reading/status"]],
-    ["fonte desconhecida", (b) => b.reading.source = "instagram", ["/reading/source"]],
+    ["fonte desconhecida", (b) => b.reading.source = "facebook", ["/reading/source"]],
     ["cinema fora do formato", (b) => b.reading.cinema = "Cine Alquimia", ["/reading/cinema"]],
     ["tmdb_id como texto", (b) => b.reading.movies[0].tmdb_id = "9600001", [
       "/reading/movies/0/tmdb_id",

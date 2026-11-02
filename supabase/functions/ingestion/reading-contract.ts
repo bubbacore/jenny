@@ -21,7 +21,12 @@ export const sourceType = z.enum([
   "veloxtickets",
   "cinesercla_site",
   "official_site",
+  "instagram",
 ]);
+
+// The source types read in posts, whose successful readings bring the post
+// read or say there is no new post.
+const postSourceTypes: ReadonlySet<string> = new Set(["official_site", "instagram"]);
 
 const contentRating = z.enum(["L", "10", "12", "14", "16", "18"]);
 
@@ -216,11 +221,12 @@ export const Reading = z.discriminatedUnion("status", [
     ...common,
     status: z.literal("ok"),
     post: Post.optional().describe(
-      "O post lido, numa leitura do site oficial com post novo. A fonte do post é a da leitura.",
+      "O post lido, numa leitura do site oficial ou do Instagram com post novo. A fonte do post " +
+        "é a da leitura.",
     ),
     no_new_post: z.literal(true).optional().describe(
-      "Indica, numa leitura do site oficial, que não há post novo. A leitura vai sem filmes nem " +
-        "sessões, e a ingestão reaproveita a programação do último post lido.",
+      "Indica, numa leitura do site oficial ou do Instagram, que não há post novo. A leitura " +
+        "vai sem filmes nem sessões, e a ingestão reaproveita a programação do último post lido.",
     ),
   }),
   z.strictObject({ ...common, status: z.literal("error"), reason }),
@@ -238,9 +244,9 @@ export const Reading = z.discriminatedUnion("status", [
     "resultado da busca num filme cuja busca não trouxe resultado. " +
     "Recusa também um filme sem TMDB sem without_tmdb ou com o filme proposto (tmdb, " +
     "tmdb_title ou tmdb_year), e without_tmdb num filme com tmdb_id. " +
-    "Recusa também uma leitura ok do site oficial sem o post nem no_new_post, ou com os dois, " +
-    "um post ou no_new_post numa leitura de outra fonte e uma leitura sem post novo com filmes " +
-    "ou sessões.",
+    "Recusa também uma leitura ok do site oficial ou do Instagram sem o post nem no_new_post, " +
+    "ou com os dois, um post ou no_new_post numa leitura de outra fonte e uma leitura sem post " +
+    "novo com filmes ou sessões.",
 });
 
 export type Reading = z.infer<typeof Reading>;
@@ -396,25 +402,25 @@ type PostShape = ReadingShape & {
   no_new_post?: true;
 };
 
-// Every successful reading of the official site reads a post or says there is
-// no new post, and only it does.
+// Every successful reading of a source of posts, the official site or
+// Instagram, reads a post or says there is no new post, and only it does.
 function checkPost(reading: PostShape, context: z.RefinementCtx) {
   if (reading.status !== "ok") return;
 
   const { post, no_new_post } = reading;
-  if (reading.source !== "official_site") {
+  if (!postSourceTypes.has(reading.source)) {
     if (post) {
       context.addIssue({
         code: "custom",
         path: ["post"],
-        message: "Só uma leitura do site oficial traz um post.",
+        message: "Só uma leitura do site oficial ou do Instagram traz um post.",
       });
     }
     if (no_new_post) {
       context.addIssue({
         code: "custom",
         path: ["no_new_post"],
-        message: "Só uma leitura do site oficial indica que não há post novo.",
+        message: "Só uma leitura do site oficial ou do Instagram indica que não há post novo.",
       });
     }
     return;
@@ -425,7 +431,8 @@ function checkPost(reading: PostShape, context: z.RefinementCtx) {
       code: "custom",
       path: ["post"],
       message:
-        "Uma leitura do site oficial traz o post lido ou a indicação de que não há post novo.",
+        "Uma leitura do site oficial ou do Instagram traz o post lido ou a indicação de que não " +
+        "há post novo.",
     });
   }
   if (post && no_new_post) {
