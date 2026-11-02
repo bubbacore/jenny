@@ -24,12 +24,8 @@ Deno.test("o plano da coleta devolve os 7 cinemas da v1 com as configurações d
         config: { theater_id: 1602, city_id: 4 },
       }],
       ["cinema-do-centro", "aracaju", {
-        type: "official_site",
-        config: {
-          url: "https://cinemadocentro.com.br/",
-          wordpress_category_id: 3,
-          post_title_prefix: "Confira a programação",
-        },
+        type: "instagram",
+        config: { username: "cinemadocentro" },
       }],
       ["cinemark-jardins", "aracaju", {
         type: "ingresso_com",

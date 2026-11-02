@@ -332,7 +332,7 @@ Deno.test("os resumos de coleta listam os cinemas sem sucesso no dia e informam 
   for (
     const [cinema, source] of [
       ["centerplex-parque-shopping", "veloxtickets"],
-      ["cinema-do-centro", "official_site"],
+      ["cinema-do-centro", "instagram"],
       ["cinemark-riomar", "ingresso_com"],
       ["cinemark-jardins", "ingresso_com"],
       ["cinesercla-praia-sul", "cinesercla_site"],

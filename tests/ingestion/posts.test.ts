@@ -21,7 +21,7 @@ import {
   window,
 } from "./reading.ts";
 
-// The Cinema do Centro is read in the weekly post on its official site, and it
+// The Cinema do Centro is read in the weekly post on its Instagram, and it
 // is closed on Wednesdays. Its post comes out on Wednesday, with the
 // showtimes from Thursday to Tuesday.
 const CINEMA = "cinema-do-centro";
@@ -35,11 +35,11 @@ function readPost(
   sessions: unknown[],
   clock: string,
 ) {
-  return read(CINEMA, "official_site", movies, sessions, clock, { post: weeklyPost });
+  return read(CINEMA, "instagram", movies, sessions, clock, { post: weeklyPost });
 }
 
 function readWithoutNewPost(clock: string) {
-  return read(CINEMA, "official_site", [], [], clock, { no_new_post: true });
+  return read(CINEMA, "instagram", [], [], clock, { no_new_post: true });
 }
 
 async function lastReadPosts(clock: string): Promise<Record<string, any>> {
@@ -61,7 +61,7 @@ function iso(time: string): string {
 
 function lastPost(weeklyPost: ReturnType<typeof post>) {
   return {
-    source: "official_site",
+    source: "instagram",
     url: weeklyPost.url,
     published_at: iso(weeklyPost.published_at),
   };
@@ -313,12 +313,12 @@ async function refusedWithoutNewPost(clock: string) {
   assertEquals(started.status, 201, JSON.stringify(started.body));
   const refused = await record(
     started.body.reading_id,
-    reading(CINEMA, "official_site", [], [], { no_new_post: true }),
+    reading(CINEMA, "instagram", [], [], { no_new_post: true }),
     clock,
   );
   const closed = await record(
     started.body.reading_id,
-    reading(CINEMA, "official_site", [], [], { status: "error", reason: "Leitura recusada." }),
+    reading(CINEMA, "instagram", [], [], { status: "error", reason: "Leitura recusada." }),
     clock,
   );
   assertEquals(closed.status, 200, JSON.stringify(closed.body));
@@ -367,7 +367,7 @@ Deno.test("uma leitura de post sem a fonte, o link, a data ou o período, ou sem
   const valid = () => ({
     reading_id: crypto.randomUUID(),
     collection_release: RELEASE,
-    reading: reading(CINEMA, "official_site", [movie("a", 9400151)], [
+    reading: reading(CINEMA, "instagram", [movie("a", 9400151)], [
       session("a", "2026-10-08T19:00"),
     ]),
   });

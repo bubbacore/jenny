@@ -194,7 +194,7 @@ Deno.test("cada dia da janela tem um só estado: com sessões, dia sem funcionam
 
   const { body } = await read(
     "cinema-do-centro",
-    "official_site",
+    "instagram",
     [movie("a", 9700003)],
     [
       session("a", `${day}T16:00`),
@@ -219,7 +219,7 @@ Deno.test("cada dia da janela tem um só estado: com sessões, dia sem funcionam
 
   // A failed reading keeps the showtimes of the post, and with them the
   // states of the days.
-  const failed = await read("cinema-do-centro", "official_site", [], [], at(day, "10:00"), error);
+  const failed = await read("cinema-do-centro", "instagram", [], [], at(day, "10:00"), error);
   assertEquals(failed.body.result, "failure");
   assertEquals(await cinemaDays("cinema-do-centro", at(day, "10:00")), states);
 });
@@ -243,11 +243,11 @@ Deno.test("uma sessão em dia sem funcionamento é descartada e gera closed-day-
   const [, tuesday, wednesday] = window(day);
   const movies = [movie("a", 9700004)];
 
-  await read("cinema-do-centro", "official_site", movies, [
+  await read("cinema-do-centro", "instagram", movies, [
     session("a", `${day}T16:00`),
   ], at(day, "07:00"));
 
-  const { body } = await read("cinema-do-centro", "official_site", movies, [
+  const { body } = await read("cinema-do-centro", "instagram", movies, [
     session("a", `${day}T16:00`),
     session("a", `${wednesday}T18:00`),
     session("a", `${tuesday}T18:00`),

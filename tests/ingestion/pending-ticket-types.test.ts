@@ -93,7 +93,7 @@ Deno.test("a resolução vale para os valores guardados de todos os cinemas do m
   await readPriced("cinemark-riomar", "ingresso_com", day, "08:00", [
     { source_ticket: partner, price_cents: 2200 },
   ]);
-  await readPriced("cinema-do-centro", "official_site", day, "08:00", [
+  await readPriced("cinema-do-centro", "instagram", day, "08:00", [
     { source_ticket: partner, price_cents: 1000 },
   ]);
 
