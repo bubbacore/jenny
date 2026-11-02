@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.26.0](https://github.com/bubbacore/jenny/compare/v0.25.0...v0.26.0) (2026-11-02)
+
+
+### ⚠ BREAKING CHANGES
+
+* **db:** the collection plan now returns the instagram source type for the Cinema do Centro, with the username in its configuration. Collection clients must read it with an Instagram reading tool and send readings with the instagram source.
+
+### Features
+
+* **db:** add the Instagram source type ([c50cc20](https://github.com/bubbacore/jenny/commit/c50cc209bb90c2e22a84ae923edc64d1ea515be9))
+* **db:** read the Cinema do Centro on Instagram ([901db0e](https://github.com/bubbacore/jenny/commit/901db0e74ed461e689253779a941cc55e7c4874d))
+* **ingestion:** accept posts read on Instagram ([14cc420](https://github.com/bubbacore/jenny/commit/14cc4208770c7b94c4be936d86e7601b5c58fc83))
+
 ## [0.25.0](https://github.com/bubbacore/jenny/compare/v0.24.0...v0.25.0) (2026-10-27)
 
 
