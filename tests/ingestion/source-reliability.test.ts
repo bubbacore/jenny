@@ -24,6 +24,7 @@ async function resetRanking() {
     "veloxtickets",
     "cinesercla_site",
     "official_site",
+    "instagram",
   ]);
 }
 
@@ -296,6 +297,13 @@ Deno.test("a fórmula conta só divergências entre tipos de fonte principal dif
         0,
         "site oficial: 0 divergências em 0 filmes comparados, menos de 10; mantém a posição do ranking inicial",
       ],
+      [
+        5,
+        "instagram",
+        0,
+        0,
+        "Instagram: 0 divergências em 0 filmes comparados, menos de 10; mantém a posição do ranking inicial",
+      ],
     ],
   );
 });
@@ -323,7 +331,7 @@ Deno.test("a fórmula considera só as últimas 8 semanas", async () => {
   await readIn("centerplex-parque-shopping", "veloxtickets", [rated(id, "16")], old, "11:00");
 
   const { body } = await updateReliability(at(monday, "23:00"));
-  assertEquals(body.ranking.map((place: any) => place.compared), [0, 0, 0, 0]);
+  assertEquals(body.ranking.map((place: any) => place.compared), [0, 0, 0, 0, 0]);
 });
 
 Deno.test("um tipo de fonte com menos de 10 filmes comparados fica na posição do ranking inicial", async () => {
@@ -416,6 +424,7 @@ Deno.test("uma mudança no ranking recalcula os filmes afetados e devolve source
     "cinesercla_site",
     "ingresso_com",
     "official_site",
+    "instagram",
   ]);
   assertEquals(body.alerts, [{
     type: "source-reliability",
@@ -427,6 +436,7 @@ Deno.test("uma mudança no ranking recalcula os filmes afetados e devolve source
       "2. site da Cinesercla: 0 divergências em 12 filmes comparados (0%)",
       "3. ingresso.com: 4 divergências em 12 filmes comparados (33%)",
       "4. site oficial: 0 divergências em 0 filmes comparados, menos de 10; mantém a posição do ranking inicial",
+      "5. Instagram: 0 divergências em 0 filmes comparados, menos de 10; mantém a posição do ranking inicial",
     ].join("\n"),
   }]);
   assertEquals(

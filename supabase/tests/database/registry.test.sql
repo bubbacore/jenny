@@ -1,6 +1,6 @@
 begin;
 
-select plan(28);
+select plan(33);
 
 -- Configuração própria do tipo de fonte
 
@@ -71,6 +71,35 @@ select lives_ok(
   $$ select pg_temp.add_source('official_site',
        '{"url": "https://exemplo.com/", "wordpress_category_id": 3, "post_title_prefix": "Confira"}') $$,
   'aceita a configuração completa do site oficial'
+);
+
+select lives_ok(
+  $$ select pg_temp.add_source('instagram', '{"username": "cinema.novo_1"}') $$,
+  'aceita a configuração completa do Instagram'
+);
+
+select throws_ok(
+  $$ select pg_temp.add_source('instagram', '{}') $$,
+  '23514', null,
+  'recusa a configuração do Instagram sem username'
+);
+
+select throws_ok(
+  $$ select pg_temp.add_source('instagram', '{"username": "Cinema Novo"}') $$,
+  '23514', null,
+  'recusa um username do Instagram com maiúsculas ou espaços'
+);
+
+select throws_ok(
+  $$ select pg_temp.add_source('instagram', '{"username": 123}') $$,
+  '23514', null,
+  'recusa o username do Instagram que não é texto'
+);
+
+select throws_ok(
+  $$ select pg_temp.add_source('instagram', '{"username": "cinemanovo", "url": "https://exemplo.com/"}') $$,
+  '23514', null,
+  'recusa um campo que não é do Instagram'
 );
 
 -- Exatamente uma fonte ativa por cinema ativo
