@@ -1,6 +1,6 @@
 begin;
 
-select plan(33);
+select plan(34);
 
 -- Configuração própria do tipo de fonte
 
@@ -152,6 +152,18 @@ select lives_ok(
   'aceita desativar um cinema junto com a sua fonte'
 );
 rollback to savepoint deactivate_cinema;
+
+select results_eq(
+  $$ select source.type::text, source.config, source.active
+     from public.sources as source
+     join public.cinemas as cinema on cinema.id = source.cinema_id
+     where cinema.slug = 'cinema-do-centro'
+     order by source.active desc $$,
+  $$ values
+       ('instagram', '{"username": "cinemadocentro"}'::jsonb, true),
+       ('official_site', '{"url": "https://cinemadocentro.com.br/", "wordpress_category_id": 3, "post_title_prefix": "Confira a programação"}'::jsonb, false) $$,
+  'o Cinema do Centro é lido no Instagram, e o site oficial continua cadastrado, inativo'
+);
 
 select is(
   (select count(*)::integer from public.cinemas as cinema

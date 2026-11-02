@@ -45,6 +45,14 @@ select is(
 -- earlier release of the ingestion did. The test records it straight in the
 -- database, on dates between the fixed dates of the ingestion tests and the
 -- weeks they draw at random. Its days follow the rules of the other sources.
+-- Only the official site read posts back then, so the test reads the Cinema
+-- do Centro on it again, inside the transaction of the test.
+update public.sources set active = false
+where cinema_id = (select id from public.cinemas where slug = 'cinema-do-centro');
+update public.sources set active = true
+where cinema_id = (select id from public.cinemas where slug = 'cinema-do-centro')
+  and type = 'official_site';
+
 create temporary table legacy_post as
 select public.record_reading(
   (

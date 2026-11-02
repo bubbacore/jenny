@@ -305,7 +305,7 @@ Deno.test("a sessão guarda o preço de bilheteria por tipo de ingresso quando a
 Deno.test("a leitura fica no histórico com o release da coleta, o início, o fim e as contagens", async () => {
   // A source title new to every run, so its pending identification is new.
   const run = crypto.randomUUID().slice(0, 8);
-  const first = await read("cinema-do-centro", "official_site", [movie("a", 9400001)], [
+  const first = await read("cinema-do-centro", "instagram", [movie("a", 9400001)], [
     session("a", "2026-10-05T16:00"),
     session("a", "2026-10-05T18:00"),
   ], "2026-10-05T12:02:00-03:00");
@@ -314,7 +314,7 @@ Deno.test("a leitura fica no histórico com o release da coleta, o início, o fi
   const started = await start("cinema-do-centro", "2026-10-05T12:03:00-03:00");
   const recorded = await record(
     started.body.reading_id,
-    reading("cinema-do-centro", "official_site", [
+    reading("cinema-do-centro", "instagram", [
       movie("a", 9400001),
       movie("b", 9400002, { tmdb_search_top_id: 9400099, source_title: `Filme b ${run}` }),
     ], [
@@ -371,7 +371,7 @@ Deno.test("o registro recusa uma leitura que não confere com a reserva ou com o
 
   const untitled = await record(
     id,
-    reading("cinema-do-centro", "official_site", [movie("a", 9500001, { tmdb: undefined })], []),
+    reading("cinema-do-centro", "instagram", [movie("a", 9500001, { tmdb: undefined })], []),
   );
   assertEquals(untitled.status, 400);
   assertEquals(untitled.body.error.issues.map((issue: any) => issue.path), [
@@ -380,17 +380,17 @@ Deno.test("o registro recusa uma leitura que não confere com a reserva ou com o
 
   const created = await record(
     id,
-    reading("cinema-do-centro", "official_site", [movie("a", 9500002)], [
+    reading("cinema-do-centro", "instagram", [movie("a", 9500002)], [
       session("a", "2026-10-05T16:00"),
     ]),
   );
   assertEquals(created.status, 200);
 
-  const again = await record(id, reading("cinema-do-centro", "official_site", [], []));
+  const again = await record(id, reading("cinema-do-centro", "instagram", [], []));
   assertEquals(again.status, 409);
   assertEquals(again.body.error.code, "reading_closed");
 
-  const known = await read("cinema-do-centro", "official_site", [
+  const known = await read("cinema-do-centro", "instagram", [
     movie("a", 9500002, { tmdb: undefined }),
   ], [session("a", "2026-10-05T16:00")]);
   assertEquals(known.status, 200);
@@ -398,7 +398,7 @@ Deno.test("o registro recusa uma leitura que não confere com a reserva ou com o
 
   const unknown = await record(
     crypto.randomUUID(),
-    reading("cinema-do-centro", "official_site", [], []),
+    reading("cinema-do-centro", "instagram", [], []),
   );
   assertEquals(unknown.status, 400);
   assertEquals(unknown.body.error.code, "unknown_reading");

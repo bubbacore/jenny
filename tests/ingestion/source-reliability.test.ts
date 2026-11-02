@@ -105,8 +105,8 @@ Deno.test("o valor muda quando uma fonte mais confiável passa a informá-lo e q
   const id = newTmdbId();
   const monday = newWeek();
 
-  await readIn("cinema-do-centro", "official_site", [rated(id, "14")], monday, "10:00");
-  assertEquals((await chosen(id)).content_rating_source_type, "official_site");
+  await readIn("cinema-do-centro", "instagram", [rated(id, "14")], monday, "10:00");
+  assertEquals((await chosen(id)).content_rating_source_type, "instagram");
   await readIn("centerplex-parque-shopping", "veloxtickets", [rated(id, "16")], monday, "11:00");
   assertEquals(
     [(await chosen(id)).content_rating, (await chosen(id)).content_rating_source_type],
@@ -115,7 +115,7 @@ Deno.test("o valor muda quando uma fonte mais confiável passa a informá-lo e q
 
   await readIn(
     "cinema-do-centro",
-    "official_site",
+    "instagram",
     [rated(id, "14", { tmdb: { content_rating: "18" } })],
     monday,
     "12:00",
