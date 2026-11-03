@@ -1,6 +1,6 @@
 // deno-lint-ignore-file no-explicit-any
 import { assertEquals } from "@std/assert";
-import { callIngestion, readView } from "./local.ts";
+import { callIngestion, readView, withClosedWeekdays } from "./local.ts";
 import {
   addDays,
   at,
@@ -187,41 +187,43 @@ Deno.test("uma leitura sem nenhuma sessão de hoje em diante, com algum dia de f
 });
 
 Deno.test("cada dia da janela tem um só estado: com sessões, dia sem funcionamento, dia sem sessões ou dia não divulgado", async () => {
-  // The Cinema do Centro is closed on Wednesdays, and its post covers the
-  // days from Monday to Friday.
-  const day = newWeek();
-  const [, tuesday, wednesday, thursday, friday, saturday, sunday] = window(day);
+  await withClosedWeekdays("cinema-do-centro", [3], async () => {
+    // The Cinema do Centro is closed on Wednesdays, and its post covers the
+    // days from Monday to Friday.
+    const day = newWeek();
+    const [, tuesday, wednesday, thursday, friday, saturday, sunday] = window(day);
 
-  const { body } = await read(
-    "cinema-do-centro",
-    "instagram",
-    [movie("a", 9700003)],
-    [
-      session("a", `${day}T16:00`),
-      session("a", `${tuesday}T18:00`),
-      session("a", `${thursday}T18:00`),
-    ],
-    at(day, "08:00"),
-    { post: post(at(addDays(day, -5), "10:00"), period(day, friday)) },
-  );
-  assertEquals(body.result, "success");
+    const { body } = await read(
+      "cinema-do-centro",
+      "instagram",
+      [movie("a", 9700003)],
+      [
+        session("a", `${day}T16:00`),
+        session("a", `${tuesday}T18:00`),
+        session("a", `${thursday}T18:00`),
+      ],
+      at(day, "08:00"),
+      { post: post(at(addDays(day, -5), "10:00"), period(day, friday)) },
+    );
+    assertEquals(body.result, "success");
 
-  const states = [
-    [day, "with_sessions"],
-    [tuesday, "with_sessions"],
-    [wednesday, "closed"],
-    [thursday, "with_sessions"],
-    [friday, "no_sessions"],
-    [saturday, "not_announced"],
-    [sunday, "not_announced"],
-  ];
-  assertEquals(await cinemaDays("cinema-do-centro", at(day, "08:00")), states);
+    const states = [
+      [day, "with_sessions"],
+      [tuesday, "with_sessions"],
+      [wednesday, "closed"],
+      [thursday, "with_sessions"],
+      [friday, "no_sessions"],
+      [saturday, "not_announced"],
+      [sunday, "not_announced"],
+    ];
+    assertEquals(await cinemaDays("cinema-do-centro", at(day, "08:00")), states);
 
-  // A failed reading keeps the showtimes of the post, and with them the
-  // states of the days.
-  const failed = await read("cinema-do-centro", "instagram", [], [], at(day, "10:00"), error);
-  assertEquals(failed.body.result, "failure");
-  assertEquals(await cinemaDays("cinema-do-centro", at(day, "10:00")), states);
+    // A failed reading keeps the showtimes of the post, and with them the
+    // states of the days.
+    const failed = await read("cinema-do-centro", "instagram", [], [], at(day, "10:00"), error);
+    assertEquals(failed.body.result, "failure");
+    assertEquals(await cinemaDays("cinema-do-centro", at(day, "10:00")), states);
+  });
 });
 
 Deno.test("numa fonte sem post, um dia sem sessões em que o cinema funciona é dia não divulgado", async () => {
@@ -239,31 +241,33 @@ Deno.test("numa fonte sem post, um dia sem sessões em que o cinema funciona é 
 });
 
 Deno.test("uma sessão em dia sem funcionamento é descartada e gera closed-day-session", async () => {
-  const day = newWeek();
-  const [, tuesday, wednesday] = window(day);
-  const movies = [movie("a", 9700004)];
+  await withClosedWeekdays("cinema-do-centro", [3], async () => {
+    const day = newWeek();
+    const [, tuesday, wednesday] = window(day);
+    const movies = [movie("a", 9700004)];
 
-  await read("cinema-do-centro", "instagram", movies, [
-    session("a", `${day}T16:00`),
-  ], at(day, "07:00"));
+    await read("cinema-do-centro", "instagram", movies, [
+      session("a", `${day}T16:00`),
+    ], at(day, "07:00"));
 
-  const { body } = await read("cinema-do-centro", "instagram", movies, [
-    session("a", `${day}T16:00`),
-    session("a", `${wednesday}T18:00`),
-    session("a", `${tuesday}T18:00`),
-  ], at(day, "08:00"));
+    const { body } = await read("cinema-do-centro", "instagram", movies, [
+      session("a", `${day}T16:00`),
+      session("a", `${wednesday}T18:00`),
+      session("a", `${tuesday}T18:00`),
+    ], at(day, "08:00"));
 
-  assertEquals(body.result, "success");
-  assertEquals(body.sessions, { received: 3, discarded: 1, accepted: 2, retained: 0 });
-  assertEquals(body.alerts, [{
-    type: "closed-day-session",
-    subject: "closed-day-session:cinema-do-centro",
-    effect: "open",
-    text: `Cinema do Centro: 1 sessão foi descartada em dia sem funcionamento (${
-      dayMonth(wednesday)
-    }). Confira se os dias de funcionamento do cinema mudaram.`,
-  }]);
-  assertEquals((await showtimes("cinema-do-centro")).map((row) => row.date), [day, tuesday]);
+    assertEquals(body.result, "success");
+    assertEquals(body.sessions, { received: 3, discarded: 1, accepted: 2, retained: 0 });
+    assertEquals(body.alerts, [{
+      type: "closed-day-session",
+      subject: "closed-day-session:cinema-do-centro",
+      effect: "open",
+      text: `Cinema do Centro: 1 sessão foi descartada em dia sem funcionamento (${
+        dayMonth(wednesday)
+      }). Confira se os dias de funcionamento do cinema mudaram.`,
+    }]);
+    assertEquals((await showtimes("cinema-do-centro")).map((row) => row.date), [day, tuesday]);
+  });
 });
 
 Deno.test("uma queda de mais da metade das sessões aceita as sessões e gera session-drop", async () => {

@@ -1,6 +1,13 @@
 // deno-lint-ignore-file no-explicit-any
 import { assert, assertEquals } from "@std/assert";
-import { apiUrl, callIngestion, hermesToken, publishableKey, secretKey } from "./local.ts";
+import {
+  apiUrl,
+  callIngestion,
+  hermesToken,
+  publishableKey,
+  secretKey,
+  withClosedWeekdays,
+} from "./local.ts";
 
 const plan = (body: unknown, options?: Parameters<typeof callIngestion>[2]) =>
   callIngestion("collection-plan", body, options);
@@ -48,14 +55,23 @@ Deno.test("o plano da coleta devolve os 7 cinemas da v1 com as configurações d
 });
 
 Deno.test("o plano da coleta traz os dias sem funcionamento de cada cinema", async () => {
-  const { body } = await plan({ collection_type: "daily" });
-  const closedWeekdays = Object.fromEntries(
-    body.cinemas.map((cinema: any) => [cinema.slug, cinema.closed_weekdays]),
-  );
+  await withClosedWeekdays("cinema-do-centro", [3, 7], async () => {
+    const { body } = await plan({ collection_type: "daily" });
+    const closedWeekdays = Object.fromEntries(
+      body.cinemas.map((cinema: any) => [cinema.slug, cinema.closed_weekdays]),
+    );
 
-  assertEquals(closedWeekdays["cinema-do-centro"], ["wednesday"]);
-  assertEquals(closedWeekdays["cine-alquimia"], []);
-  assertEquals(closedWeekdays["cinemark-riomar"], []);
+    assertEquals(closedWeekdays["cinema-do-centro"], ["wednesday", "sunday"]);
+    assertEquals(closedWeekdays["cine-alquimia"], []);
+    assertEquals(closedWeekdays["cinemark-riomar"], []);
+  });
+});
+
+Deno.test("o Cinema do Centro não tem dia sem funcionamento", async () => {
+  const { body } = await plan({ collection_type: "daily" });
+  const cinema = body.cinemas.find((cinema: any) => cinema.slug === "cinema-do-centro");
+
+  assertEquals(cinema.closed_weekdays, []);
 });
 
 Deno.test("o plano traz os títulos na fonte resolvidos de cada cinema", async () => {

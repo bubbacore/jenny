@@ -44,3 +44,32 @@ export async function readView(view: string, query = ""): Promise<any[]> {
   if (!response.ok) throw new Error(`${view}: ${JSON.stringify(body)}`);
   return body;
 }
+
+// No v1 cinema has a closed day, so a test of the closed day rule closes some
+// weekdays of a cinema while it runs and restores the registry afterwards.
+// The test files run one at a time, so no other test sees the change.
+export async function withClosedWeekdays(
+  cinema: string,
+  weekdays: number[],
+  test: () => Promise<void>,
+): Promise<void> {
+  const [{ closed_weekdays: registered }] = await readView(
+    "cinemas",
+    `slug=eq.${cinema}&select=closed_weekdays`,
+  );
+  await updateCinema(cinema, { closed_weekdays: weekdays });
+  try {
+    await test();
+  } finally {
+    await updateCinema(cinema, { closed_weekdays: registered });
+  }
+}
+
+async function updateCinema(cinema: string, fields: Record<string, unknown>): Promise<void> {
+  const response = await fetch(`${apiUrl}/rest/v1/cinemas?slug=eq.${cinema}`, {
+    method: "PATCH",
+    headers: { apikey: secretKey, "content-type": "application/json" },
+    body: JSON.stringify(fields),
+  });
+  if (!response.ok) throw new Error(`cinemas: ${await response.text()}`);
+}

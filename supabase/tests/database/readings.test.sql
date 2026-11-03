@@ -92,7 +92,7 @@ select is(
     from public.site_cinema_days('2026-12-14T12:00:00-03:00')
     where cinema = 'cinema-do-centro'
   ),
-  array['not_announced', 'not_announced', 'closed', 'with_sessions', 'with_sessions',
+  array['not_announced', 'not_announced', 'not_announced', 'with_sessions', 'with_sessions',
     'not_announced', 'not_announced'],
   'num post guardado sem período, nenhum dia é dia sem sessões'
 );
