@@ -1,6 +1,6 @@
 // deno-lint-ignore-file no-explicit-any
 import { assertEquals } from "@std/assert";
-import { callIngestion, readView } from "./local.ts";
+import { callIngestion, readView, withClosedWeekdays } from "./local.ts";
 import {
   addDays,
   at,
@@ -21,9 +21,9 @@ import {
   window,
 } from "./reading.ts";
 
-// The Cinema do Centro is read in the weekly post on its Instagram, and it
-// is closed on Wednesdays. Its post comes out on Wednesday, with the
-// showtimes from Thursday to Tuesday.
+// The Cinema do Centro is read in the posts on its Instagram, and it has no
+// closed day. In these tests, its post brings the showtimes from Thursday to
+// Tuesday.
 const CINEMA = "cinema-do-centro";
 
 // A source title new to every run, so its pending identification is new.
@@ -184,18 +184,47 @@ async function readWeeklyPost(tmdbId: number, sessionDays: number[]) {
 }
 
 Deno.test("num post de quinta a terça, um dia do período sem sessões é dia sem sessões, e a quarta seguinte é dia sem funcionamento", async () => {
-  const days = await readWeeklyPost(9400161, [0, 1, 2, 4, 5]);
-  const [thursday, friday, saturday, sunday, monday, tuesday, wednesday] = days;
+  await withClosedWeekdays("cinema-do-centro", [3], async () => {
+    const days = await readWeeklyPost(9400161, [0, 1, 2, 4, 5]);
+    const [thursday, friday, saturday, sunday, monday, tuesday, wednesday] = days;
 
-  assertEquals(await cinemaDays(CINEMA, at(thursday, "08:00")), [
-    [thursday, "with_sessions"],
-    [friday, "with_sessions"],
-    [saturday, "with_sessions"],
-    [sunday, "no_sessions"],
-    [monday, "with_sessions"],
-    [tuesday, "with_sessions"],
-    [wednesday, "closed"],
-  ]);
+    assertEquals(await cinemaDays(CINEMA, at(thursday, "08:00")), [
+      [thursday, "with_sessions"],
+      [friday, "with_sessions"],
+      [saturday, "with_sessions"],
+      [sunday, "no_sessions"],
+      [monday, "with_sessions"],
+      [tuesday, "with_sessions"],
+      [wednesday, "closed"],
+    ]);
+  });
+});
+
+Deno.test("uma leitura sem post novo aplica os dias sem funcionamento do momento à programação reaproveitada", async () => {
+  // A post from Monday to Wednesday read while the cinema was closed on
+  // Wednesdays, as on 2026-11-03, before the owner reopened that day.
+  const monday = newWeek();
+  const [, tuesday, wednesday] = window(monday);
+  const sessions = [
+    session("a", `${tuesday}T19:00`),
+    session("a", `${wednesday}T19:00`),
+  ];
+
+  await withClosedWeekdays(CINEMA, [3], async () => {
+    const { body } = await readPost(
+      post(at(monday, "10:00"), period(monday, wednesday)),
+      [movie("a", 9400165)],
+      sessions,
+      at(monday, "12:00"),
+    );
+    assertEquals(body.sessions, { received: 2, discarded: 1, accepted: 1, retained: 0 });
+  });
+
+  const { body } = await readWithoutNewPost(at(tuesday, "08:00"));
+  assertEquals(body.result, "success", JSON.stringify(body));
+  assertEquals(body.sessions, { received: 2, discarded: 0, accepted: 2, retained: 0 });
+  assertEquals(body.alerts, []);
+  assertEquals((await showtimes(CINEMA)).map((row) => row.date), [tuesday, wednesday]);
 });
 
 Deno.test("uma leitura sem post novo reaproveita o período do último post lido, e os dias depois dele são dias não divulgados", async () => {
@@ -210,7 +239,7 @@ Deno.test("uma leitura sem post novo reaproveita o período do último post lido
     [sunday, "no_sessions"],
     [monday, "with_sessions"],
     [tuesday, "with_sessions"],
-    [wednesday, "closed"],
+    [wednesday, "not_announced"],
     [thursday, "not_announced"],
     [friday, "not_announced"],
   ]);
@@ -229,7 +258,7 @@ Deno.test("uma leitura sem post novo no último dia do período não é desatual
     await cinemaDays(CINEMA, at(tuesday, "08:00")),
     window(tuesday).map((date) => [
       date,
-      date === tuesday ? "no_sessions" : date === wednesday ? "closed" : "not_announced",
+      date === tuesday ? "no_sessions" : "not_announced",
     ]),
   );
 
