@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.27.0](https://github.com/bubbacore/jenny/compare/v0.26.1...v0.27.0) (2026-11-04)
+
+
+### Features
+
+* **db:** identify movies by the movie video ([fcb8f2f](https://github.com/bubbacore/jenny/commit/fcb8f2f4a9854177b88e1805fd6646280e76a1ea))
+* **ingestion:** accept the video_identification block in readings ([54c063e](https://github.com/bubbacore/jenny/commit/54c063e0f5fea6bc32d2936740e74c25eb280b49))
+
 ## [0.26.1](https://github.com/bubbacore/jenny/compare/v0.26.0...v0.26.1) (2026-11-03)
 
 
