@@ -123,6 +123,17 @@ const WithoutTmdb = z.strictObject({
   ),
 }).meta({ id: "WithoutTmdb" });
 
+// What the Hermes read in the movie video of an Instagram source, for a source
+// title that would become a movie without TMDB.
+const VideoIdentification = z.strictObject({
+  post_url: z.url({ protocol: /^https?$/ }).describe("O link do post do vídeo do filme."),
+  original_title: nonBlank.describe("O título original escrito no vídeo."),
+  directors: z.array(nonBlank).min(1).describe("A direção escrita no vídeo."),
+  tmdb_search_top_id: tmdbId.describe(
+    "O primeiro resultado da busca no TMDB pelo título original do vídeo, sem o ano.",
+  ),
+}).meta({ id: "VideoIdentification" });
+
 const Movie = z.strictObject({
   key: nonBlank.describe("Chave do filme dentro da leitura, citada pelas sessões."),
   source_title: nonBlank.describe("O título na fonte, como a fonte principal o publica."),
@@ -164,6 +175,12 @@ const Movie = z.strictObject({
     "Os dados da fonte principal de um filme sem TMDB, obrigatórios quando o tmdb_id é null. " +
       "Um filme sem TMDB que o plano da coleta já lista traz o título e só os campos que o plano " +
       "apontou como faltantes; a ingestão ignora os demais.",
+  ),
+  video_identification: VideoIdentification.optional().describe(
+    "Só numa leitura do Instagram, num filme identificado pelo vídeo do filme: o que o vídeo " +
+      "mostra e o primeiro resultado da busca pelo título original dele. As sessões são aceitas " +
+      "quando o tmdb_id proposto coincide com esse primeiro resultado, e o título na fonte vira " +
+      "título na fonte resolvido no cinema; senão, vira identificação pendente.",
   ),
 }).superRefine(checkMovie).meta({ id: "Movie" });
 
@@ -231,7 +248,7 @@ export const Reading = z.discriminatedUnion("status", [
   }),
   z.strictObject({ ...common, status: z.literal("error"), reason }),
   z.strictObject({ ...common, status: z.literal("incomplete"), reason }),
-]).superRefine(checkReferences).superRefine(checkPost).meta({
+]).superRefine(checkReferences).superRefine(checkPost).superRefine(checkVideoIdentifications).meta({
   title: "Leitura",
   description: "A programação completa de um cinema na janela, lida da fonte principal. " +
     "Além do schema, a ingestão recusa: chaves de filme repetidas, sessões que citam um filme " +
@@ -246,7 +263,8 @@ export const Reading = z.discriminatedUnion("status", [
     "tmdb_title ou tmdb_year), e without_tmdb num filme com tmdb_id. " +
     "Recusa também uma leitura ok do site oficial ou do Instagram sem o post nem no_new_post, " +
     "ou com os dois, um post ou no_new_post numa leitura de outra fonte e uma leitura sem post " +
-    "novo com filmes ou sessões.",
+    "novo com filmes ou sessões. " +
+    "Recusa também video_identification num filme sem TMDB ou numa leitura que não é do Instagram.",
 });
 
 export type Reading = z.infer<typeof Reading>;
@@ -274,6 +292,7 @@ type MovieShape = {
   tmdb_year?: number;
   tmdb?: unknown;
   without_tmdb?: unknown;
+  video_identification?: unknown;
 };
 
 // The top search result is named only when the search brought one. A movie
@@ -302,6 +321,13 @@ function checkMovie(movie: MovieShape, context: z.RefinementCtx) {
     return;
   }
 
+  if (movie.video_identification !== undefined) {
+    context.addIssue({
+      code: "custom",
+      path: ["video_identification"],
+      message: "Um filme identificado pelo vídeo do filme tem filme proposto, com o tmdb_id.",
+    });
+  }
   if (movie.without_tmdb === undefined) {
     context.addIssue({
       code: "custom",
@@ -456,6 +482,25 @@ function checkPost(reading: PostShape, context: z.RefinementCtx) {
       message: "Uma leitura sem post novo vai sem sessões.",
     });
   }
+}
+
+// The movie video is read only in an Instagram profile, so only an Instagram
+// reading identifies a movie by it.
+function checkVideoIdentifications(
+  reading: ReadingShape & { source: string },
+  context: z.RefinementCtx,
+) {
+  if (reading.source === "instagram") return;
+
+  reading.movies.forEach((movie, index) => {
+    if (movie.video_identification !== undefined) {
+      context.addIssue({
+        code: "custom",
+        path: ["movies", index, "video_identification"],
+        message: "Só uma leitura do Instagram identifica um filme pelo vídeo do filme.",
+      });
+    }
+  });
 }
 
 // The indexes of the values already seen earlier in the list.
